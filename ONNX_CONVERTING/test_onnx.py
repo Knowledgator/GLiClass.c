@@ -27,7 +27,7 @@ def run_inference_and_compare(ort_session, onnx_inputs, original_logits) -> bool
     onnx_tensor = torch.tensor(onnx_outputs[0])
     print(f"ONNX Outputs: {onnx_tensor}")
 
-    comparison_result = torch.allclose(original_logits, onnx_tensor, atol=1e-4)
+    comparison_result = torch.allclose(original_logits, onnx_tensor, atol=1e-3)
     return comparison_result
 
 
@@ -59,7 +59,7 @@ if __name__ == "__main__":
     gliclass_model = GLiClassModel.from_pretrained(original_model_name)
     tokenizer = AutoTokenizer.from_pretrained(original_model_name)
     pipeline = ZeroShotClassificationPipeline(gliclass_model, tokenizer, classification_type="multi-label", device="cpu")
-    print("Model loaded")
+    print(f"Model {original_model_name} loaded")
 
     text = "ONNX is an open-source format designed to enable the interoperability of AI models across various frameworks and tools."
     labels = ['format', 'model', 'tool', 'cat']

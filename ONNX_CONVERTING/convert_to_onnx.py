@@ -12,7 +12,7 @@ def get_original_logits(model, tokenized_inputs) -> list:
     with torch.no_grad():
         model_output = model(**tokenized_inputs)
     logits = model_output.logits       
-    logits = logits.round(decimals=4)
+    logits = logits.round(decimals=5)
 
     return logits.tolist()
 
