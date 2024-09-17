@@ -18,7 +18,7 @@ def get_original_logits(model, tokenized_inputs) -> list:
 
 def create_config(original_model_name, architecture_type, original_logits, save_path) -> None:
     data = {
-        "original_model_name" :original_model_name,
+        "original_model_name" : original_model_name,
         "architecture_type" : architecture_type,
         "original_logits" : original_logits
     }
@@ -29,7 +29,7 @@ def create_config(original_model_name, architecture_type, original_logits, save_
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--model_path', type=str, default= "knowledgator/gliclass-base-v1.0")
-    parser.add_argument('--save_path', type=str, default = 'model/')
+    parser.add_argument('--save_path', type=str, default = 'onnx/')
     parser.add_argument('--quantize', type=bool, default = True)
     parser.add_argument('--classification_type', type=str, default = "multi-label")
 
@@ -77,13 +77,13 @@ if __name__ == "__main__":
     )
 
     if args.quantize:
-        quantized_save_path = os.path.join(args.save_path, "model-quantized.onnx")
+        quantized_save_path = os.path.join(args.save_path, "model-int8-quantized.onnx")
         # Quantize the ONNX model
         print("Quantizing the model...")
         quantize_dynamic(
             onnx_save_path,  # Input model
             quantized_save_path,  # Output model
-            weight_type=QuantType.QUInt8  # Quantize weights to 8-bit integers
+            weight_type = QuantType.QUInt8  # Quantize weights to 8-bit integers
         )
     print("Creating configuration file...")
     config_path = args.save_path + "config.json"

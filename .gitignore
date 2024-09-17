@@ -1,2 +1,4 @@
 .venv
 model/**
+onnx/**
+push_to_hf.ipynb

@@ -33,7 +33,7 @@ def run_inference_and_compare(ort_session, onnx_inputs, original_logits) -> bool
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--onnx_path', type=str, default = 'model/')
+    parser.add_argument('--onnx_path', type=str, default = 'onnx/')
     parser.add_argument('--test_quantized', type=bool, default = False)
 
     args = parser.parse_args()
