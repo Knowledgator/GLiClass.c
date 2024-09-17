@@ -5,8 +5,26 @@ import numpy as np
 from gliclass  import GLiClassModel, ZeroShotClassificationPipeline
 from transformers import AutoTokenizer
 
-import torch
+import torch, json
 from onnxruntime.quantization import quantize_dynamic, QuantType
+
+def get_original_logits(model, tokenized_inputs) -> list:
+    with torch.no_grad():
+        model_output = model(**tokenized_inputs)
+    logits = model_output.logits       
+    logits = logits.round(decimals=4)
+
+    return logits.tolist()
+
+def create_config(original_model_name, architecture_type, original_logits, save_path) -> None:
+    data = {
+        "original_model_name" :original_model_name,
+        "architecture_type" : architecture_type,
+        "original_logits" : original_logits
+    }
+
+    with open(save_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -18,15 +36,19 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     if args.classification_type not in ['single-label', "multi-label"]:
-        raise ValueError("This type is not supported yet")
+        raise NotImplementedError("This type is not supported yet")
 
     os.makedirs(args.save_path, exist_ok= True)
     
-    onnx_save_path = os.path.join(args.save_path, f"{args.classification_type}-model.onnx")
+    onnx_save_path = os.path.join(args.save_path, "model.onnx")
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     
     print("Loading a model...")
     gliclass_model = GLiClassModel.from_pretrained(args.model_path)
+    architecture_type = gliclass_model.config.architecture_type
+    if architecture_type != 'uni-encoder':
+        raise NotImplementedError("This artchitecture is not implemented for ONNX yet")
+    
     tokenizer = AutoTokenizer.from_pretrained(args.model_path)
     pipeline = ZeroShotClassificationPipeline(gliclass_model, tokenizer, classification_type=args.classification_type, device=device)
 
@@ -55,7 +77,7 @@ if __name__ == "__main__":
     )
 
     if args.quantize:
-        quantized_save_path = os.path.join(args.save_path, f"{args.classification_type}-model-quantized.onnx")
+        quantized_save_path = os.path.join(args.save_path, "model-quantized.onnx")
         # Quantize the ONNX model
         print("Quantizing the model...")
         quantize_dynamic(
@@ -63,5 +85,13 @@ if __name__ == "__main__":
             quantized_save_path,  # Output model
             weight_type=QuantType.QUInt8  # Quantize weights to 8-bit integers
         )
+    print("Creating configuration file...")
+    config_path = args.save_path + "config.json"
+    create_config(
+        original_model_name = args.model_path,
+        architecture_type = architecture_type,
+        original_logits = get_original_logits(gliclass_model, tokenized_inputs),
+        save_path = config_path
+    )
 
     print("Done")
