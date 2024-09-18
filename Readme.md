@@ -24,6 +24,11 @@ Then you need initialize and update submodules:
 cd GLiClass.c
 git submodule update --init --recursive
 ```
+Before run make sure you have jq package installed 
+```
+sudo apt-get update
+sudo apt-get install jq
+```
 
 Run 
 ```
