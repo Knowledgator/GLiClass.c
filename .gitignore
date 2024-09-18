@@ -2,3 +2,5 @@
 model/**
 onnx/**
 push_to_hf.ipynb
+build/**
+tokenizer/**

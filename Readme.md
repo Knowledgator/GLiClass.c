@@ -13,3 +13,19 @@ python ONNX/test_onnx.py \
         --onnx_path "model/" \
         --test_quantized False
 ```
+
+Build
+```
+git clone url will be added after realese
+```
+
+Then you need initialize and update submodules:
+```
+cd GLiClass.c
+git submodule update --init --recursive
+```
+
+Run 
+```
+./run_GLiClass.sh  knowledgator/gliclass-small-v1.0
+```
