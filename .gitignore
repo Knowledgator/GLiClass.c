@@ -5,3 +5,4 @@ push_to_hf.ipynb
 build/**
 tokenizer/**
 .vscode
+data/**

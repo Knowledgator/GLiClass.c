@@ -13,21 +13,25 @@ include_directories(include)
 # Path for tokenizers-cpp
 set(TOKENIZER_CPP_PATH "./tokenizers-cpp")
 
+# Path for cJSON
+set(CJSON_PATH "./cJSON")
+
 # Add tokenizers-cpp as a subdirectory
 add_subdirectory(${TOKENIZER_CPP_PATH} tokenizers EXCLUDE_FROM_ALL)
 
-# # Include headers for tokenizers
-# include_directories(tokenizers-cpp/include)
+# Add cJSON as a subdirectory
+add_subdirectory(${CJSON_PATH} cJSON EXCLUDE_FROM_ALL)
 
 # Add the executable (your main C file)
 add_executable(GLiClass
                 src/tokenizer.c
                 src/preprocessor.c
+                src/read_data.c
                 main.c)
 
 # Include directories with tokenizers-cpp header files
-target_include_directories(GLiClass PRIVATE ${TOKENIZER_CPP_PATH}/include)
+target_include_directories(GLiClass PRIVATE ${TOKENIZER_CPP_PATH}/include ${CJSON_PATH})
 
 # Link tokenizers-cpp libraries
-target_link_libraries(GLiClass tokenizers_cpp)
+target_link_libraries(GLiClass tokenizers_cpp cjson)
 

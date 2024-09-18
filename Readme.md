@@ -1,3 +1,6 @@
+# TODO
+add support for same_labels = false 
+
 Run converting
 ```
 python ONNX/convert_to_onnx.py \
@@ -32,5 +35,22 @@ sudo apt-get install jq
 
 Run 
 ```
-./run_GLiClass.sh  knowledgator/gliclass-small-v1.0
+./run_GLiClass.sh knowledgator/gliclass-base-v1.0 /path/to/your_data.json
+```
+**Important** Data in your json file must be in folowing format
+```
+{
+    "texts": [
+        "ONNX is an open-source format designed to enable the interoperability of AI models.",
+        "Why are you running?",
+        "Hello"
+    ],
+    "labels": [
+        "format",
+        "model",
+        "tool",
+        "cat"
+    ],
+    "same_labels": true
+}
 ```

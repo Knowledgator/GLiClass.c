@@ -1,8 +1,20 @@
 #!/bin/bash
+
+# Check if the first argument (model name) is provided
 if [ -z "$1" ]; then
-    echo "You need to specify model name e.g: ./run_GLiClass.sh knowledgator/gliclass-base-v1.0"
+    echo "You need to specify a model name e.g: ./run_GLiClass.sh knowledgator/gliclass-base-v1.0"
     exit 1
 fi
+
+# Check if the second argument (path to .json file) is provided
+if [ -z "$2" ]; then
+    echo "You need to specify a path to the .json file e.g: ./run_GLiClass.sh knowledgator/gliclass-base-v1.0 /path/to/your_data.json"
+    exit 1
+fi
+
+# Assign arguments to variables
+MODEL_NAME=$1
+JSON_FILE_PATH=$2
 
 MODEL_NAME="$1"
 
@@ -71,4 +83,4 @@ else
 fi
 
 # run
-./build/GLiClass
+./build/GLiClass data/test_data.json
