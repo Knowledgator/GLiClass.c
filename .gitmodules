@@ -1,3 +1,6 @@
 [submodule "tokenizers-cpp"]
 	path = tokenizers-cpp
 	url = https://github.com/mlc-ai/tokenizers-cpp.git
+[submodule "cJSON"]
+	path = cJSON
+	url = https://github.com/DaveGamble/cJSON.git
