@@ -7,6 +7,9 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Include the headers
+include_directories(include)
+
 # Path for tokenizers-cpp
 set(TOKENIZER_CPP_PATH "./tokenizers-cpp")
 
@@ -17,7 +20,10 @@ add_subdirectory(${TOKENIZER_CPP_PATH} tokenizers EXCLUDE_FROM_ALL)
 # include_directories(tokenizers-cpp/include)
 
 # Add the executable (your main C file)
-add_executable(GLiClass main.c)
+add_executable(GLiClass
+                src/tokenizer.c
+                src/preprocessor.c
+                main.c)
 
 # Include directories with tokenizers-cpp header files
 target_include_directories(GLiClass PRIVATE ${TOKENIZER_CPP_PATH}/include)

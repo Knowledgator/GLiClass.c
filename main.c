@@ -1,59 +1,41 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include "tokenizers_c.h"
 
+// Project includes (folder include)
+#include "tokenizer.h" 
+#include "preprocessor.h"
+
 int main() {
-    // Read tokenizer.json
-    FILE* file = fopen("tokenizer/tokenizer.json", "rb");
-    if (!file) {
-        fprintf(stderr, "Cant open file  tokenizer/tokenizer.json\n");
-        return 1;
+    const char* texts[] = {
+        "ONNX is an open-source format designed to enable the interoperability of AI models.",
+        "Why are you running?",
+        "Hello"
+    };
+    const char* labels[] = {"format", "model", "tool", "cat"};
+
+    size_t num_texts = 3;
+    size_t num_labels[] = {4, 4, 4};
+
+    bool same_labels = true;
+    bool prompt_first = false;
+
+    TokenizerHandle tokenizer_handler = create_tokenizer("tokenizer/tokenizer.json");
+    if (!tokenizer_handler) {
+        return 1; // This error is created in create_tokenizer
     }
 
-    fseek(file, 0, SEEK_END);
-    size_t json_len = ftell(file);
-    fseek(file, 0, SEEK_SET);
-
-    // Allocate memory for  JSON
-    char* json = (char*)malloc(json_len + 1);
-    if (!json) {
-        fprintf(stderr, "Cant allocate memory for JSON\n");
-        fclose(file);
-        return 1;
-    }
-
-    // Read file
-    size_t read_len = fread(json, 1, json_len, file);
-    fclose(file);
-    if (read_len != json_len) {
-        fprintf(stderr, "Faild to read tokenizer/tokenizer.json\n");
-        free(json);
-        return 1;
-    }
-    json[json_len] = '\0'; // Add las null sym
-
-    // Ini tokenizer
-    TokenizerHandle handle = tokenizers_new_from_str(json, json_len);
-    free(json); // free mem
-
-    if (!handle) {
-        fprintf(stderr, "Cant create tokenizer\n");
-        return 1;
-    }
-
+    // Prepare inputs
+    char** prepared_inputs = prepare_inputs(texts, labels, num_texts, num_labels, same_labels, prompt_first);  
     // Tokenize 
-    const char* sentence = "Hello world!";
-    TokenizerEncodeResult result;
-    tokenizers_encode(handle, sentence, strlen(sentence), 1, &result);
-
+    TokenizedInputs tokenized = tokenize_inputs(tokenizer_handler, prepared_inputs, num_texts);
     // print
-    for (size_t i = 0; i < result.len; ++i) {
-        printf("Token ID: %d\n", result.token_ids[i]);
-    }
+    print_tokenized_inputs(&tokenized);
 
     // Free mem
-    tokenizers_free_encode_results(&result, 1);
-    tokenizers_free(handle);
+    free_tokenized_inputs(&tokenized);
+    tokenizers_free(tokenizer_handler);
 
     return 0;
 }

@@ -1,0 +1,11 @@
+{
+    "files.associations": {
+        "stdlib.h": "c",
+        "tokenizer.h": "c",
+        "ctype.h": "c",
+        "tokenizers_c.h": "c",
+        "stdbool.h": "c",
+        "stdio.h": "c",
+        "string.h": "c"
+    }
+}

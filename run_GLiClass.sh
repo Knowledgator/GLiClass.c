@@ -18,8 +18,8 @@ if [ ! -f "$FILE" ]; then
     wget -P "$DIR" "$TOKENIZER_URL"
 else
     echo "File $FILE already exists. Updating ..."
-    rm $FILE
-    wget -P "$DIR" "$TOKENIZER_URL"
+    # rm $FILE
+    # wget -P "$DIR" "$TOKENIZER_URL"
 fi
 
 # run
