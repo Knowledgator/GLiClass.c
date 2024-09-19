@@ -17,7 +17,6 @@ int main(int argc, char *argv[]) {
         printf("Usage: ./run_GLiClass.sh knowledgator/gliclass-small-v1.0 /path/to/your_data.json\n");
         return 1;
     }
-
     // reading data from json file
     char* json_string = read_file(argv[1]);
     if (!json_string) {

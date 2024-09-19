@@ -24,10 +24,22 @@ Then you need initialize and update submodules:
 ```
 cd GLiClass.c
 git submodule update --init --recursive
+```
+After that you need to download [ONNX runtime](https://github.com/microsoft/onnxruntime/releases) for your system.
+
+Unpack it within the same derictory as GLiNER.cpp code.
+
+For `tar.gz` files you can use the following command:
+```bash
+tar -xvzf onnxruntime-linux-x64-1.19.2.tgz 
+```
+
+Then create build directory and compile the project:
+```bash
 mkdir -p build
 cd build
 cmake ..
-make
+make -j8
 ```
 Before run make sure you have jq package installed 
 ```

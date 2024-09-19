@@ -6,3 +6,5 @@ build/**
 tokenizer/**
 .vscode
 data/**
+onnxruntime-linux-x64-1.19.2.tgz
+onnxruntime-linux-x64-1.19.2

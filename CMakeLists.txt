@@ -10,6 +10,30 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Include the headers
 include_directories(include)
 
+############################################ ONNNX ###########################################
+# Path to ONNXRuntime
+set(ONNXRUNTIME_PATH "./onnxruntime-linux-x64-1.19.2")
+
+# Include directories for ONNXRuntime
+include_directories(
+  "${ONNXRUNTIME_PATH}/include/*"
+  "${ONNXRUNTIME_PATH}/include/onnxruntime"
+  "${ONNXRUNTIME_PATH}/include/onnxruntime/core/session"
+)
+
+# Find ONNXRuntime library
+find_library(ONNXRUNTIME_LIB
+  NAMES onnxruntime libonnxruntime
+  PATHS "${ONNXRUNTIME_PATH}/lib"
+  NO_DEFAULT_PATH
+)
+
+if(NOT ONNXRUNTIME_LIB)
+  message(FATAL_ERROR "ONNXRuntime library not found. Please check the library path.")
+endif()
+
+###########################################
+
 # Path for tokenizers-cpp
 set(TOKENIZER_CPP_PATH "./tokenizers-cpp")
 
@@ -22,6 +46,7 @@ add_subdirectory(${TOKENIZER_CPP_PATH} tokenizers EXCLUDE_FROM_ALL)
 # Add cJSON as a subdirectory
 add_subdirectory(${CJSON_PATH} cJSON EXCLUDE_FROM_ALL)
 
+
 # Add the executable (your main C file)
 add_executable(GLiClass
                 src/tokenizer.c
@@ -30,8 +55,8 @@ add_executable(GLiClass
                 main.c)
 
 # Include directories with tokenizers-cpp header files
-target_include_directories(GLiClass PRIVATE ${TOKENIZER_CPP_PATH}/include ${CJSON_PATH})
+target_include_directories(GLiClass PRIVATE ${TOKENIZER_CPP_PATH}/include ${CJSON_PATH} ${ONNXRUNTIME_PATH}/include)
 
 # Link tokenizers-cpp libraries
-target_link_libraries(GLiClass tokenizers_cpp cjson)
+target_link_libraries(GLiClass tokenizers_cpp cjson ${ONNXRUNTIME_LIB})
 
