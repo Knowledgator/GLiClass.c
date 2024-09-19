@@ -20,15 +20,15 @@ char* read_file(const char* filename) {
     return content;
 }
 
-void parse_json(const char* json_string, char*** texts, size_t* num_texts, char*** labels,
+void parse_json(const char* json_string, char*** texts, size_t* num_texts, char**** labels,
                 size_t** num_labels, size_t* num_labels_size, bool* same_labels) {
     // Parse json
     cJSON* json = cJSON_Parse(json_string);
     if (!json) {
-        fprintf(stderr, "Ошибка парсинга JSON: %s\n", cJSON_GetErrorPtr());
+        fprintf(stderr, "Failed to parse JSON: %s\n", cJSON_GetErrorPtr());
         return;
     }
-
+    
     // Get array texts
     cJSON* texts_json = cJSON_GetObjectItemCaseSensitive(json, "texts");
     if (cJSON_IsArray(texts_json)) {
@@ -41,31 +41,69 @@ void parse_json(const char* json_string, char*** texts, size_t* num_texts, char*
             }
         }
     }
-
-    // Get array labels
-    cJSON* labels_json = cJSON_GetObjectItemCaseSensitive(json, "labels");
-    if (cJSON_IsArray(labels_json)) {
-        *num_labels_size = cJSON_GetArraySize(labels_json);
-        *labels = (char**)malloc(*num_labels_size * sizeof(char*));
-        for (size_t i = 0; i < *num_labels_size; ++i) {
-            cJSON* label = cJSON_GetArrayItem(labels_json, i);
-            if (cJSON_IsString(label)) {
-                (*labels)[i] = strdup(label->valuestring);
-            }
-        }
-    }
-
-    // Dynamically create an array num_labels corresponding to the number of texts
-    *num_labels = (size_t*)malloc(*num_texts * sizeof(size_t));
-    for (size_t i = 0; i < *num_texts; ++i) {
-        (*num_labels)[i] = *num_labels_size;  // Number of labels for each text
-    }
-
     // get value same_labels
     cJSON* same_labels_json = cJSON_GetObjectItemCaseSensitive(json, "same_labels");
     if (cJSON_IsBool(same_labels_json)) {
         *same_labels = cJSON_IsTrue(same_labels_json);
     }
+    
+    if (*same_labels){
+        // Get array labels
+        cJSON* labels_json = cJSON_GetObjectItemCaseSensitive(json, "labels");
+        if (cJSON_IsArray(labels_json)) {
+            *num_labels_size = cJSON_GetArraySize(labels_json);
+            *labels = (char**)malloc(*num_labels_size * sizeof(char*));
+            for (size_t i = 0; i < *num_labels_size; ++i) {
+                cJSON* label = cJSON_GetArrayItem(labels_json, i);
+                if (cJSON_IsString(label)) {
+                    (*labels)[i] = strdup(label->valuestring);
+                }
+            }
+        }
+        // Dynamically create an array num_labels corresponding to the number of texts
+        *num_labels = (size_t*)malloc(*num_texts * sizeof(size_t));
+        for (size_t i = 0; i < *num_texts; ++i) {
+            (*num_labels)[i] = *num_labels_size;  // Number of labels for each text
+        }
+    } else {
+        // We get an array of labels for each text (array of arrays)
+        cJSON* labels_json = cJSON_GetObjectItemCaseSensitive(json, "labels");
+        if (cJSON_IsArray(labels_json)) {
+            // We check that the number of tags matches the number of texts
+            if (cJSON_GetArraySize(labels_json) != *num_texts) {
+                fprintf(stderr, "Error:the number of arrays of labels does not match the number of texts.\n");
+                cJSON_Delete(json);
+                return;
+            }
 
+            *num_labels = (size_t*)malloc(*num_texts * sizeof(size_t)); // dynamic array num_labels
+            *labels = (char***)malloc(*num_texts * sizeof(char**));     // array of arrays for each group of labels
+            
+            // We iterate over each text
+            for (size_t i = 0; i < *num_texts; ++i) {
+                cJSON* text_labels_json = cJSON_GetArrayItem(labels_json, i);
+                if (cJSON_IsArray(text_labels_json)) {
+                    size_t num_labels_for_text = cJSON_GetArraySize(text_labels_json);
+                    (*num_labels)[i] = num_labels_for_text;
+                    (*labels)[i] = (char**)malloc(num_labels_for_text * sizeof(char*));
+                    if (!(*labels)[i]) {
+                        fprintf(stderr, "Error: failed to allocate memory for text labels %zu.\n", i);
+                        cJSON_Delete(json);
+                        return;
+                    }
+                    printf("Number of labels for text %zu: %zu\n", i, (*num_labels)[i]);
+
+                    for (size_t j = 0; j < num_labels_for_text; ++j) {
+                        cJSON* label_item  = cJSON_GetArrayItem(text_labels_json, j);
+                        if (cJSON_IsString(label_item)) {
+                            (*labels)[i][j] = strdup(label_item->valuestring);
+                        }
+                    }
+                }else{
+                    fprintf(stderr, "Error: labels forr text %zu are not array.\n", i);
+                }
+            }
+        }
+    }
     cJSON_Delete(json);  // free memory
 }

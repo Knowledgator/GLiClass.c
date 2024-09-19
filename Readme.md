@@ -45,12 +45,23 @@ Run
         "Why are you running?",
         "Hello"
     ],
-    "labels": [
-        "format",
-        "model",
-        "tool",
-        "cat"
+    "labels": ["format","model","tool","cat"],
+    "same_labels": true
+}
+```
+or
+```
+{
+    "texts": [
+        "ONNX is an open-source format designed to enable the interoperability of AI models.",
+        "Why are you running?",
+        "Hello"
     ],
+    "labels": [
+        ["format","model","tool","cat"],
+        ["format","model","tool","cat"],
+        ["format","model","tool","cat"],
+        ]
     "same_labels": true
 }
 ```
