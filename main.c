@@ -41,12 +41,14 @@ int main(int argc, char *argv[]) {
 
     // Prepare inputs
     char** prepared_inputs = prepare_inputs(texts, labels, num_texts, num_labels, same_labels, prompt_first);  
+    
     // Tokenize 
     TokenizedInputs tokenized = tokenize_inputs(tokenizer_handler, prepared_inputs, num_texts);
     // print
     print_tokenized_inputs(&tokenized);
 
     // Free mem
+    free_prepared_inputs(prepared_inputs, num_texts);
     free_tokenized_inputs(&tokenized);
     tokenizers_free(tokenizer_handler);
 
