@@ -1,5 +1,3 @@
-# TODO
-add support for same_labels = false 
 # Info
 Run converting
 ```
@@ -17,15 +15,19 @@ python ONNX/test_onnx.py \
         --test_quantized False
 ```
 
-Build
+# Build
 ```
-git clone url will be added after realese
+git clone url_will_be_added_after_realese
 ```
 
 Then you need initialize and update submodules:
 ```
 cd GLiClass.c
 git submodule update --init --recursive
+mkdir -p build
+cd build
+cmake ..
+make
 ```
 Before run make sure you have jq package installed 
 ```
@@ -33,7 +35,7 @@ sudo apt-get update
 sudo apt-get install jq
 ```
 
-Run 
+# Run 
 ```
 ./run_GLiClass.sh knowledgator/gliclass-base-v1.0 /path/to/your_data.json
 ```

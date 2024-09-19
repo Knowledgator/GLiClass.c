@@ -91,8 +91,6 @@ void parse_json(const char* json_string, char*** texts, size_t* num_texts, char*
                         cJSON_Delete(json);
                         return;
                     }
-                    printf("Number of labels for text %zu: %zu\n", i, (*num_labels)[i]);
-
                     for (size_t j = 0; j < num_labels_for_text; ++j) {
                         cJSON* label_item  = cJSON_GetArrayItem(text_labels_json, j);
                         if (cJSON_IsString(label_item)) {
