@@ -83,4 +83,4 @@ else
 fi
 
 # run
-./build/GLiClass data/test_data.json
+./build/GLiClass $2

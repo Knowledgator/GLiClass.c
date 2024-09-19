@@ -46,6 +46,11 @@ int main(int argc, char *argv[]) {
 
     // Prepare inputs
     char** prepared_inputs = prepare_inputs(texts, labels, num_texts, num_labels, same_labels, prompt_first);  
+    printf("Prepared Inputs:\n");
+    for (size_t i = 0; i < num_texts; ++i) {
+        printf("  Input %zu: %s\n", i, prepared_inputs[i]);
+    }
+    
     // Tokenize 
     TokenizedInputs tokenized = tokenize_inputs(tokenizer_handler, prepared_inputs, num_texts);
     // print
