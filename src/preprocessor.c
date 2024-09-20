@@ -86,8 +86,7 @@ char* prepare_input(const char* text, const char* labels[], size_t num_labels, b
 }
 
 void free_prepared_inputs(char** prepared_inputs, size_t num_texts){
-    for (size_t i = 0; i < num_texts; i++)
-    {
+    for (size_t i = 0; i < num_texts; i++){
         free(prepared_inputs[i]);
     }
     free(prepared_inputs);

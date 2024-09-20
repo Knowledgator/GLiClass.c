@@ -49,6 +49,8 @@ add_subdirectory(${CJSON_PATH} cJSON EXCLUDE_FROM_ALL)
 
 # Add the executable (your main C file)
 add_executable(GLiClass
+                src/postprocessor.c
+                src/model.c
                 src/tokenizer.c
                 src/preprocessor.c
                 src/read_data.c

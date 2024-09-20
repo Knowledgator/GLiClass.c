@@ -13,7 +13,7 @@ typedef struct {
     size_t seq_length;  
 } TokenizedInputs;
 
-TokenizedInputs tokenize_inputs(TokenizerHandle tokenizer, const char* inputs[], size_t num_texts);
+TokenizedInputs tokenize_inputs(TokenizerHandle tokenizer, const char* inputs[], size_t num_texts, size_t max_length);
 void print_tokenized_inputs(const TokenizedInputs* tokenized);
 void free_tokenized_inputs(TokenizedInputs* tokenized);
 TokenizerHandle create_tokenizer(const char* filepath);

@@ -6,7 +6,7 @@
 
 #include "tokenizer.h"
 
-TokenizedInputs tokenize_inputs(TokenizerHandle tokenizer, const char* inputs[], size_t num_texts) {
+TokenizedInputs tokenize_inputs(TokenizerHandle tokenizer, const char* inputs[], size_t num_texts, size_t max_length) {
     TokenizerEncodeResult* results = (TokenizerEncodeResult*)malloc(num_texts * sizeof(TokenizerEncodeResult));
     if (!results) {
         fprintf(stderr, "Error while allocating memmory for tokenization results\n");
@@ -19,13 +19,20 @@ TokenizedInputs tokenize_inputs(TokenizerHandle tokenizer, const char* inputs[],
         input_lengths[i] = strlen(inputs[i]);
     }
 
-    tokenizers_encode_batch(tokenizer, inputs, input_lengths, num_texts, 1, results);
+    int add_special_tokens = 1;
+    tokenizers_encode_batch(tokenizer, inputs, input_lengths, num_texts, add_special_tokens, results);
 
-    // Calculate max sequence lenght
-    size_t max_len = 0;
+    // We trim the sequences to max_length and find the maximum length after trimming
+    size_t* seq_lengths = (size_t*)malloc(num_texts * sizeof(size_t));
+    size_t seq_length = 0; // This will be the length of the longest sequence after trimming.
     for (size_t i = 0; i < num_texts; ++i) {
-        if (results[i].len > max_len) {
-            max_len = results[i].len;
+        if (results[i].len > max_length) {
+            seq_lengths[i] = max_length;
+        } else {
+            seq_lengths[i] = results[i].len;
+        }
+        if (seq_lengths[i] > seq_length) {
+            seq_length = seq_lengths[i];
         }
     }
 
@@ -35,18 +42,22 @@ TokenizedInputs tokenize_inputs(TokenizerHandle tokenizer, const char* inputs[],
     tokenized.token_type_ids = (int**)malloc(num_texts * sizeof(int*));
     tokenized.attention_mask = (int**)malloc(num_texts * sizeof(int*));
     tokenized.batch_size = num_texts;
-    tokenized.seq_length = max_len;
+    tokenized.seq_length = seq_length;
 
     for (size_t i = 0; i < num_texts; ++i) {
-        tokenized.input_ids[i] = (int*)malloc(max_len * sizeof(int));
-        tokenized.token_type_ids[i] = (int*)malloc(max_len * sizeof(int));
-        tokenized.attention_mask[i] = (int*)malloc(max_len * sizeof(int));
+        tokenized.input_ids[i] = (int*)malloc(seq_length * sizeof(int));
+        tokenized.token_type_ids[i] = (int*)malloc(seq_length * sizeof(int));
+        tokenized.attention_mask[i] = (int*)malloc(seq_length * sizeof(int));
 
-        for (size_t j = 0; j < max_len; ++j) {
+        for (size_t j = 0; j < seq_length; ++j) {
             if (j < results[i].len) {
+                if (j >= max_length) {
+                    // If the length exceeds max_length, cut it off
+                    break;
+                }
                 tokenized.input_ids[i][j] = results[i].token_ids[j];
-                tokenized.token_type_ids[i][j] = 0;  // В данном случае для простоты ставим 0
-                tokenized.attention_mask[i][j] = 1;  // 1, если токен присутствует
+                tokenized.token_type_ids[i][j] = 0;  // In this case, for simplicity, we set it to 0
+                tokenized.attention_mask[i][j] = 1;  // 1 if token is exists
             } else {
                 tokenized.input_ids[i][j] = 0;  // Padding
                 tokenized.token_type_ids[i][j] = 0;
@@ -80,7 +91,7 @@ void print_tokenized_inputs(const TokenizedInputs* tokenized) {
         for (size_t j = 0; j < tokenized->seq_length; ++j) {
             printf("%d, ", tokenized->attention_mask[i][j]);
         }
-        printf("]\n");
+        printf("]\n");        
     }
 }
 
