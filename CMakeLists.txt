@@ -11,8 +11,36 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include_directories(include)
 
 ############################################ ONNNX ###########################################
-# Path to ONNXRuntime
-set(ONNXRUNTIME_PATH "./onnxruntime-linux-x64-1.19.2")
+# Path to ONNXRuntime GPU
+set(ONNXRUNTIME_GPU_PATH "./onnxruntime-linux-x64-gpu-1.19.2")
+# Path to ONNXRuntime CPU
+set(ONNXRUNTIME_CPU_PATH "./onnxruntime-linux-x64-1.19.2")
+
+# Try to find GPU version first
+find_library(ONNXRUNTIME_LIB
+  NAMES onnxruntime libonnxruntime
+  PATHS "${ONNXRUNTIME_GPU_PATH}/lib"
+  NO_DEFAULT_PATH
+)
+if(NOT ONNXRUNTIME_LIB)
+  # If GPU version not found, try CPU version
+  find_library(ONNXRUNTIME_LIB
+    NAMES onnxruntime libonnxruntime
+    PATHS "${ONNXRUNTIME_CPU_PATH}/lib"
+    NO_DEFAULT_PATH
+  )
+  if(NOT ONNXRUNTIME_LIB)
+    message(FATAL_ERROR "Neither GPU nor CPU version of ONNXRuntime library found. Please check the library paths or download them from oficial site:\n
+                          https://github.com/microsoft/onnxruntime/releases.")
+  else()
+    set(ONNXRUNTIME_PATH ${ONNXRUNTIME_CPU_PATH})
+    message(WARNING "Using CPU version of ONNXRuntime")
+  endif()
+else()
+  set(ONNXRUNTIME_PATH ${ONNXRUNTIME_GPU_PATH})
+  message(WARNING "Using GPU version of ONNXRuntime")
+  add_definitions(-DUSE_CUDA)
+endif()
 
 # Include directories for ONNXRuntime
 include_directories(
@@ -20,18 +48,6 @@ include_directories(
   "${ONNXRUNTIME_PATH}/include/onnxruntime"
   "${ONNXRUNTIME_PATH}/include/onnxruntime/core/session"
 )
-
-# Find ONNXRuntime library
-find_library(ONNXRUNTIME_LIB
-  NAMES onnxruntime libonnxruntime
-  PATHS "${ONNXRUNTIME_PATH}/lib"
-  NO_DEFAULT_PATH
-)
-
-if(NOT ONNXRUNTIME_LIB)
-  message(FATAL_ERROR "ONNXRuntime library not found. Please check the library path.")
-endif()
-
 ###########################################
 
 # Path for tokenizers-cpp

@@ -1,20 +1,3 @@
-# Info
-Run converting
-```
-python ONNX/convert_to_onnx.py \
-        --model_path "knowledgator/gliclass-base-v1.0" \
-        --save_path "model/" \
-        --quantize True \
-        --classification_type "multi-label"
-```
-
-Run test
-```
-python ONNX/test_onnx.py \
-        --onnx_path "model/" \
-        --test_quantized False
-```
-
 # Build
 ```
 git clone url_will_be_added_after_realese
@@ -27,11 +10,15 @@ git submodule update --init --recursive
 ```
 After that you need to download [ONNX runtime](https://github.com/microsoft/onnxruntime/releases) for your system.
 
-Unpack it within the same derictory as GLiNER.cpp code.
+Unpack it within the same derictory as GLiClass.c code.
 
 For `tar.gz` files you can use the following command:
 ```bash
 tar -xvzf onnxruntime-linux-x64-1.19.2.tgz 
+```
+If you have GPU you can install ONNX runtime with GPU support
+```bash
+tar -xvzf onnxruntime-linux-x64-gpu-1.19.2.tgz
 ```
 
 Then create build directory and compile the project:
@@ -41,13 +28,14 @@ cd build
 cmake ..
 make -j8
 ```
-Before run make sure you have jq package installed 
+
+# Run 
+Before run make sure you have **jq** package installed 
 ```
 sudo apt-get update
 sudo apt-get install jq
 ```
-
-# Run 
+This script will download all configurations for model from [Knowledgator Hugging Face](https://huggingface.co/knowledgator)
 ```
 ./run_GLiClass.sh knowledgator/gliclass-base-v1.0 /path/to/your_data.json
 ```
@@ -78,4 +66,20 @@ or
         ]
     "same_labels": true
 }
+```
+# Convert your model
+Run converting
+```
+python ONNX/convert_to_onnx.py \
+        --model_path "knowledgator/gliclass-base-v1.0" \
+        --save_path "model/" \
+        --quantize True \
+        --classification_type "multi-label"
+```
+
+Run test
+```
+python ONNX/test_onnx.py \
+        --onnx_path "model/" \
+        --test_quantized False
 ```

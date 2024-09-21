@@ -160,6 +160,23 @@ OrtSession* create_ort_session(OrtEnv* env, const char* model_path) {
         return NULL;
     }
 
+    #ifdef USE_CUDA // GPU
+    int device_id = 0;
+    status = OrtSessionOptionsAppendExecutionProvider_CUDA(session_options, device_id);
+    if (status != NULL) {
+        const char* msg = g_ort->GetErrorMessage(status);
+        fprintf(stderr, "Error: Failed to add CUDA Execution Provider: %s\n", msg);
+        g_ort->ReleaseStatus(status);
+        g_ort->ReleaseSessionOptions(session_options);
+        return NULL;
+    }
+    g_ort->SetSessionGraphOptimizationLevel(session_options, ORT_ENABLE_ALL);
+    printf("\tCUDA Execution Provider added successfully.\n");
+    #else
+    printf("\tUsing CPU Execution Provider.\n");
+    #endif
+    
+
     // Load the model and create a session
     status = g_ort->CreateSession(env, model_path, session_options, &session);
     if (status != NULL) {
