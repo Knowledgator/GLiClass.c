@@ -16,7 +16,8 @@ For `tar.gz` files you can use the following command:
 ```bash
 tar -xvzf onnxruntime-linux-x64-1.19.2.tgz 
 ```
-If you have GPU you can install ONNX runtime with GPU support
+To use the GPU, you need to utilize the ONNX runtime with GPU support and set up cuDNN. Follow the instructions to install cuDNN here:  
+https://developer.nvidia.com/cudnn-downloads 
 ```bash
 tar -xvzf onnxruntime-linux-x64-gpu-1.19.2.tgz
 ```

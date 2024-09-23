@@ -56,7 +56,7 @@ if(NVIDIA_SMI_RESULT EQUAL 0 AND NVCC_RESULT EQUAL 0)
     message(WARNING "GPU detected, but GPU version of ONNXRuntime not found. Falling back to CPU version.")
   endif()
 else()
-  message(STATUS "NVIDIA GPU not detected or nvidia-smi not available. Using CPU version of ONNXRuntime.")
+  message(STATUS "NVIDIA GPU not detected. Using CPU version of ONNXRuntime.")
 endif()
 
 # If GPU version not found or not available, use CPU version
