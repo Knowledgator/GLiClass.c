@@ -49,7 +49,8 @@ This script will download all configurations for model from [Knowledgator Huggin
         "Hello"
     ],
     "labels": ["format","model","tool","cat"],
-    "same_labels": true
+    "same_labels": true,
+    "classification_type": "single-label" or "multi-label"
 }
 ```
 or
@@ -65,7 +66,8 @@ or
         ["format","model","tool","cat"],
         ["format","model","tool","cat"],
         ]
-    "same_labels": true
+    "same_labels": false,
+    "classification_type": "single-label" or "multi-label"
 }
 ```
 # Convert your model

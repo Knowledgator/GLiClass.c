@@ -46,7 +46,11 @@ int main(int argc, char *argv[]) {
     parse_json(json_string, &texts, &num_texts, &labels, &num_labels, &num_labels_size, &same_labels, &classification_type);
     bool prompt_first = false;
     printf("DONE: parse_json;\n");
-    printf("%s\n\n", classification_type);
+    if (classification_type == NULL){
+        printf("classification type is not provided\n");
+        return 1;
+    }
+    
 
     char** prepared_inputs = prepare_inputs(texts, labels, num_texts, num_labels, same_labels, prompt_first);
     printf("DONE: prepared_inputs;\n");  
