@@ -15,7 +15,6 @@
 // Ini variables for data
 char** texts = NULL;
 size_t num_texts = 0;
-// char** labels = NULL;
 char*** labels = NULL;
 size_t* num_labels = NULL;
 size_t num_labels_size = 0;
@@ -111,7 +110,7 @@ int main(int argc, char *argv[]) {
 
 
     ///////////// Decoding /////////////
-    process_output_tensor(output_tensor, g_ort, same_labels, labels, num_labels, num_labels_size, threshold, num_texts);
+    process_output_tensor(output_tensor, g_ort, same_labels, labels, num_labels, num_labels_size, threshold, num_texts, classification_type);
 
 
     ///////////// Free mem /////////////

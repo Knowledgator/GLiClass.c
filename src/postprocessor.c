@@ -12,7 +12,8 @@ float sigmoid(float x) {
 
 // Function for processing the output tensor (logits)
 void process_output_tensor(OrtValue* output_tensor, const OrtApi* g_ort, bool same_labels, char*** labels,
-                            size_t* num_labels, size_t num_labels_size, float threshold, size_t num_texts) {
+                            size_t* num_labels, size_t num_labels_size, float threshold, size_t num_texts,
+                            char* classification_type) {
     OrtStatus* status = NULL;
 
     // Get information about the type and shape of the tensor
@@ -62,82 +63,75 @@ void process_output_tensor(OrtValue* output_tensor, const OrtApi* g_ort, bool sa
         return;
     }
 
-    // Process logits 
-    // TODO: add decoding part
+
     // Process logits
     int batch_size = dims[0];
     int num_classes = dims[1];
-    
-    for (int i = 0; i < batch_size; i++) {
-        printf("Text %d:\n", i + 1);
-        for (int j = 0; j < num_classes; j++) {
-            float logit = output_data[i * num_classes + j];
-            float prob = 1.0f / (1.0f + expf(-logit));  // sigmoid function
-            
-            if (prob > threshold) {
-                const char* label = NULL;
-                if (same_labels) {
-                    if (j < num_labels_size) {
-                        label = labels[j];
+    if (strcmp(classification_type, "multi-label") == 0) {    
+        for (int i = 0; i < batch_size; i++) {
+            printf("Text %d:\n", i + 1);
+            for (int j = 0; j < num_classes; j++) {
+                float logit = output_data[i * num_classes + j];
+                float prob = sigmoid(logit);  // sigmoid function
+                
+                if (prob > threshold) {
+                    const char* label = NULL;
+                    if (same_labels) {
+                        if (j < num_labels_size) {
+                            label = labels[j];
+                        }
+                    } else {
+                        if (i < num_texts   && j < num_labels[i]) {
+                            label = labels[i][j];
+                        }
                     }
-                } else {
-                    if (i < num_texts   && j < num_labels[i]) {
-                        label = labels[i][j];
+                
+                    if (label) {
+                        printf("  Label: %s, Score: %.6f\n", label, prob);
+                    } else {
+                        printf("  Label: [Unknown], Score: %.6f\n", prob);
                     }
-                }
-               
-                if (label) {
-                    printf("  Label: %s, Score: %.6f\n", label, prob);
-                } else {
-                    printf("  Label: [Unknown], Score: %.6f\n", prob);
                 }
             }
+            printf("\n");
         }
-        printf("\n");
+    } else if (strcmp(classification_type, "single-label") == 0){
+        for (int i = 0; i < batch_size; i++) {
+            printf("Text %d:\n", i + 1);
+            float max_prob = 0.0f;
+            int max_idx = -1;
+            for (int j = 0; j < num_classes; j++) {
+                float logit = output_data[i * num_classes + j];
+                float prob = sigmoid(logit);  // sigmoid function
+                if (prob > max_prob) {
+                    max_prob = prob;
+                    max_idx = j;
+                }
+            }
+            
+            const char* label = NULL;
+            if (same_labels) {
+                if (max_idx < num_labels_size) {
+                    label = labels[max_idx];
+                }
+            } else {
+                if (i < num_texts && max_idx < num_labels[i]) {
+                    label = labels[i][max_idx];
+                }
+            }
+            
+            if (label) {
+                printf("  Label: %s, Score: %.6f\n", label, max_prob);
+            } else {
+                printf("  Label: [Unknown], Score: %.6f\n", max_prob);
+            }
+            printf("\n");
+        }
+    }else{
+        printf("This type of classification is not supported\n");
     }
 
 
-    // START OLD
-    // for (int i = 0; i < batch_size; i++) {
-    //     for (int j = 0; j < num_classes; j++) {
-    //         float logit = output_data[i * num_classes + j];            
-    //         float prob = sigmoid(logit);            
-    //         if (prob > threshold) {
-    //             if (same_labels) {
-    //                 if (labels == NULL || *labels == NULL) {
-    //                     printf("Error: labels is NULL\n");
-    //                     return;
-    //                 }
-    //                 if (j >= num_labels_size) {
-    //                     printf("Error: label index %d is out of bounds (max: %zu)\n", j, num_labels_size - 1);
-    //                     continue;
-    //                 }
-    //                 if ((*labels)[j] == NULL) {
-    //                     printf("Error: label for class %d is NULL\n", j);
-    //                     continue;
-    //                 }
-    //                 printf("  Label: %s, Score: %f\n", (*labels)[j], prob);
-    //             } else {
-    //                 if (labels == NULL || labels[i] == NULL) {
-    //                     printf("Error: labels for text %d is NULL\n", i);
-    //                     continue;
-    //                 }
-    //                 if (j >= num_labels[i]) {
-    //                     printf("Error: label index %d is out of bounds for text %d (max: %zu)\n", j, i, num_labels[i] - 1);
-    //                     continue;
-    //                 }
-    //                 if (labels[i][j] == NULL) {
-    //                     printf("Error: label for text %d, class %d is NULL\n", i, j);
-    //                     continue;
-    //                 }
-    //                 printf("  Label: %s, Score: %f\n", labels[i][j], prob);
-    //             }
-    //         }
-    //     }
-    //     printf("\n");
-    // }
-    // END OLD
-    // Free mem
     free(dims);
     g_ort->ReleaseTensorTypeAndShapeInfo(type_info);
 }
