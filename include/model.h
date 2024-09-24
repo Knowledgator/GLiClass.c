@@ -1,6 +1,7 @@
 #ifndef MODEL_H
 #define MODEL_H
 
+#include <stddef.h>
 #include "onnxruntime_c_api.h"
 #include "tokenizer.h"
 

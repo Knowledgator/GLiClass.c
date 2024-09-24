@@ -21,7 +21,7 @@ char* read_file(const char* filename) {
 }
 
 void parse_json(const char* json_string, char*** texts, size_t* num_texts, char**** labels,
-                size_t** num_labels, size_t* num_labels_size, bool* same_labels) {
+                size_t** num_labels, size_t* num_labels_size, bool* same_labels, char** classification_type) {
     // Parse json
     cJSON* json = cJSON_Parse(json_string);
     if (!json) {
@@ -41,6 +41,12 @@ void parse_json(const char* json_string, char*** texts, size_t* num_texts, char*
             }
         }
     }
+    // get value classification_type
+    cJSON* classification_type_json = cJSON_GetObjectItemCaseSensitive(json, "classification_type");
+    if (cJSON_IsString(classification_type_json)) {
+        *classification_type = strdup(classification_type_json->valuestring);
+    }
+
     // get value same_labels
     cJSON* same_labels_json = cJSON_GetObjectItemCaseSensitive(json, "same_labels");
     if (cJSON_IsBool(same_labels_json)) {

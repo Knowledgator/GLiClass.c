@@ -15,14 +15,17 @@
 // Ini variables for data
 char** texts = NULL;
 size_t num_texts = 0;
-char** labels = NULL;
+// char** labels = NULL;
+char*** labels = NULL;
 size_t* num_labels = NULL;
 size_t num_labels_size = 0;
 bool same_labels = false;
+char* classification_type = NULL;
 
 const char* tokenizer_path = "tokenizer/tokenizer.json";
 const char* model_path = "onnx/model.onnx";
 size_t max_length = 1024; 
+float threshold = 0.5f;
 
 const OrtApi* g_ort = NULL;
 
@@ -41,9 +44,10 @@ int main(int argc, char *argv[]) {
     }
 
     ///////////// Prepare inputs /////////////
-    parse_json(json_string, &texts, &num_texts, &labels, &num_labels, &num_labels_size, &same_labels);
+    parse_json(json_string, &texts, &num_texts, &labels, &num_labels, &num_labels_size, &same_labels, &classification_type);
     bool prompt_first = false;
     printf("DONE: parse_json;\n");
+    printf("%s\n\n", classification_type);
 
     char** prepared_inputs = prepare_inputs(texts, labels, num_texts, num_labels, same_labels, prompt_first);
     printf("DONE: prepared_inputs;\n");  
@@ -96,18 +100,18 @@ int main(int argc, char *argv[]) {
     OrtValue* output_tensor = run_inference(session, input_ids_tensor, attention_mask_tensor);
     if (output_tensor == NULL) {
         fprintf(stderr, "Model inference error.\n");
-        // Освобождаем ресурсы
+        // Free mem
         g_ort->ReleaseValue(input_ids_tensor);
         g_ort->ReleaseValue(attention_mask_tensor);
         g_ort->ReleaseSession(session);
         g_ort->ReleaseEnv(env);
         return -1;
     }
-    printf("DONE: run_inference\n\n\n\n");
+    printf("DONE: run_inference\n\n");
 
 
     ///////////// Decoding /////////////
-    process_output_tensor(output_tensor, g_ort);
+    process_output_tensor(output_tensor, g_ort, same_labels, labels, num_labels, num_labels_size, threshold, num_texts);
 
 
     ///////////// Free mem /////////////
