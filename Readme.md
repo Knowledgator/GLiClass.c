@@ -1,6 +1,12 @@
-# Build
+
+# ⭐GLiClass.c: Generalist and Lightweight Model for Sequence Classification in C
+
+GLiClass.c is a C - based inference engine for running GLiClass(Generalist and Lightweight Model for Sequence Classification) models. This is an efficient zero-shot classifier inspired by [GLiNER](https://github.com/urchade/GLiNER) work. It demonstrates the same performance as a cross-encoder while being more compute-efficient because classification is done at a single forward path.  
+
+It can be used for topic classification, sentiment analysis and as a reranker in RAG pipelines.
+## 🛠 Build
 ```
-git clone url_will_be_added_after_realese
+git clone https://github.com/werent4/GLiClass.c.git
 ```
 
 Then you need initialize and update submodules:
@@ -29,8 +35,13 @@ cd build
 cmake ..
 make -j8
 ```
+Specific build for CPU
+```bash
+cmake -DCMAKE_BUILD_TYPE=Release -C ../CMakeLists_cpu.txt ..
+make -j8
+```
 
-# Run 
+## 🚀 Run 
 Before run make sure you have **jq** package installed 
 ```
 sudo apt-get update
@@ -70,7 +81,7 @@ or
     "classification_type": "single-label" or "multi-label"
 }
 ```
-# Convert your model
+## Convert your model
 Run converting
 ```
 python ONNX/convert_to_onnx.py \

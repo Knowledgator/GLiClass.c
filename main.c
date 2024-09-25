@@ -31,7 +31,7 @@ float threshold = 0.5f;
 
 const OrtApi* g_ort = NULL;
 
-#define BATCH_SIZE 2
+#define BATCH_SIZE 8
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
@@ -60,6 +60,12 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     ///////////// intializing part /////////////
+    TokenizerHandle tokenizer_handler = create_tokenizer(tokenizer_path);
+    if (!tokenizer_handler) {
+        return 1; // This error is created in create_tokenizer
+    }
+    printf("DONE: create_tokenizer;\n");  
+
     initialize_ort_api();
     printf("DONE: initialize_ort_api;\n");
 
@@ -76,17 +82,10 @@ int main(int argc, char *argv[]) {
         g_ort->ReleaseEnv(env);
         return -1;
     }
-    printf("DONE: create_ort_session;\n");
-
-    TokenizerHandle tokenizer_handler = create_tokenizer(tokenizer_path);
-    if (!tokenizer_handler) {
-        return 1; // This error is created in create_tokenizer
-    }
-    printf("DONE: create_tokenizer;\n");  
+    printf("DONE: create_ort_session;\n\n");
     
     ////////////////////////////////////////////////
     //////////////////// INFERENCE START ////////////
-    start_time = omp_get_wtime();
     #pragma omp parallel
     {
         #pragma omp for schedule(dynamic)
@@ -105,18 +104,8 @@ int main(int argc, char *argv[]) {
 
             char** prepared_inputs = prepare_inputs(batch_texts, batch_labels, current_batch_size, batch_num_labels, same_labels, prompt_first);
             
-            #pragma omp critical
-            {
-                printf("DONE: prepared_inputs for batch %zu to %zu\n", i, i + current_batch_size - 1);
-            }
-
             ///////////// Tokenize /////////////
             TokenizedInputs tokenized = tokenize_inputs(tokenizer_handler, prepared_inputs, current_batch_size, max_length);
-            
-            #pragma omp critical
-            {
-                printf("DONE: tokenize_inputs for batch %zu to %zu\n", i, i + current_batch_size - 1);
-            }
 
             ///////////// ONNX /////////////
             OrtValue* input_ids_tensor = NULL;
@@ -131,11 +120,6 @@ int main(int argc, char *argv[]) {
                 free_prepared_inputs(prepared_inputs, current_batch_size);
                 free_tokenized_inputs(&tokenized);
                 continue;
-            }
-
-            #pragma omp critical
-            {
-                printf("DONE: prepare_input_tensors for batch %zu to %zu\n", i, i + current_batch_size - 1);
             }
 
             ///////////// Run inference /////////////
@@ -153,11 +137,6 @@ int main(int argc, char *argv[]) {
                 continue;
             }
 
-            #pragma omp critical
-            {
-                printf("DONE: run_inference for batch %zu to %zu\n", i, i + current_batch_size - 1);
-            }
-
             ///////////// Decoding /////////////
             process_output_tensor(output_tensor, g_ort, same_labels, batch_labels, batch_num_labels, num_labels_size, threshold, current_batch_size,batch_texts ,classification_type);
 
@@ -169,10 +148,6 @@ int main(int argc, char *argv[]) {
             g_ort->ReleaseValue(output_tensor);
         }
     }
-    end_time = omp_get_wtime();
-    cpu_time_used = end_time - start_time;
-    printf("Время выполнения: %f секунд\n", cpu_time_used);
-
     tokenizers_free(tokenizer_handler);
 
     return 0;

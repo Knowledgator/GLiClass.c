@@ -16,7 +16,7 @@ set(ONNXRUNTIME_GPU_PATH "./onnxruntime-linux-x64-gpu-1.19.2")
 # Path to ONNXRuntime CPU
 set(ONNXRUNTIME_CPU_PATH "./onnxruntime-linux-x64-1.19.2")
 
-# Check if NVIDIA GPU is available
+# Check if all requierments for NVIDIA GPU are available
 execute_process(
   COMMAND nvidia-smi
   RESULT_VARIABLE NVIDIA_SMI_RESULT
@@ -37,9 +37,32 @@ if(NOT NVCC_RESULT EQUAL 0)
   message(WARNING "NVIDIA GPU compiler was not detected or nvcc --version command not avaliable")
 endif()
 
+find_library(CUDNN_LIB
+  NAMES libcudnn.so libcudnn.so.8 libcudnn.so.7
+  PATHS /usr/local/cuda/lib64 /usr/lib/x86_64-linux-gnu
+  DOC "Path to cuDNN library"
+)
 
-if(NVIDIA_SMI_RESULT EQUAL 0 AND NVCC_RESULT EQUAL 0)
-  message(STATUS "NVIDIA GPU detected. Attempting to use GPU version of ONNXRuntime.")
+find_path(CUDNN_INCLUDE_DIR
+  NAMES cudnn.h
+  PATHS /usr/local/cuda/include /usr/include
+  DOC "Path to cuDNN headers"
+)
+
+set(CUDNN False CACHE BOOL "cuDNN support")
+if (CUDNN_LIB AND CUDNN_INCLUDE_DIR)
+  set(CUDNN True)
+  message(STATUS "cuDNN library found: ${CUDNN_LIB}")
+  message(STATUS "cuDNN headers found: ${CUDNN_INCLUDE_DIR}")
+  add_definitions(-DUSE_CUDNN)
+  include_directories(${CUDNN_INCLUDE_DIR})
+else()
+  set(CUDNN False)
+  message(WARNING "cuDNN not found. Ensure that cuDNN is installed and available in the system paths.")
+endif()
+
+if(NVIDIA_SMI_RESULT EQUAL 0 AND NVCC_RESULT EQUAL 0 AND CUDNN)
+  message(STATUS "NVIDIA GPU detected. All required dependencies were found. Attempting to use GPU version of ONNXRuntime.")
   
   # Try to find GPU version
   find_library(ONNXRUNTIME_LIB
