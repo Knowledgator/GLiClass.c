@@ -5,6 +5,8 @@
 #include "cJSON.h"
 #include "onnxruntime_c_api.h"
 
+#include "time.h"
+
 // Project includes (folder include)
 #include "postprocessor.h"
 #include "model.h"
@@ -42,6 +44,9 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    clock_t start, end;
+    double cpu_time_used;
+
     ///////////// Prepare inputs /////////////
     parse_json(json_string, &texts, &num_texts, &labels, &num_labels, &num_labels_size, &same_labels, &classification_type);
     bool prompt_first = false;
@@ -50,24 +55,7 @@ int main(int argc, char *argv[]) {
         printf("classification type is not provided\n");
         return 1;
     }
-    
-
-    char** prepared_inputs = prepare_inputs(texts, labels, num_texts, num_labels, same_labels, prompt_first);
-    printf("DONE: prepared_inputs;\n");  
-    
-
-    ///////////// Tokenize /////////////
-    TokenizerHandle tokenizer_handler = create_tokenizer(tokenizer_path);
-    if (!tokenizer_handler) {
-        return 1; // This error is created in create_tokenizer
-    }
-    printf("DONE: create_tokenizer;\n");  
-
-    TokenizedInputs tokenized = tokenize_inputs(tokenizer_handler, prepared_inputs, num_texts, max_length);
-    printf("DONE: tokenize_inputs;\n");  
-
-
-    ///////////// ONNX /////////////
+    ///////////// intializing part /////////////
     initialize_ort_api();
     printf("DONE: initialize_ort_api;\n");
 
@@ -86,6 +74,25 @@ int main(int argc, char *argv[]) {
     }
     printf("DONE: create_ort_session;\n");
 
+    TokenizerHandle tokenizer_handler = create_tokenizer(tokenizer_path);
+    if (!tokenizer_handler) {
+        return 1; // This error is created in create_tokenizer
+    }
+    printf("DONE: create_tokenizer;\n");  
+    
+    ////////////////////////////////////////////////
+    
+    start = clock();
+    char** prepared_inputs = prepare_inputs(texts, labels, num_texts, num_labels, same_labels, prompt_first);
+    printf("DONE: prepared_inputs;\n");  
+    
+
+    ///////////// Tokenize /////////////
+    TokenizedInputs tokenized = tokenize_inputs(tokenizer_handler, prepared_inputs, num_texts, max_length);
+    printf("DONE: tokenize_inputs;\n");  
+
+
+    ///////////// ONNX /////////////
     OrtValue* input_ids_tensor = NULL;
     OrtValue* attention_mask_tensor = NULL;    
 
@@ -115,7 +122,9 @@ int main(int argc, char *argv[]) {
 
     ///////////// Decoding /////////////
     process_output_tensor(output_tensor, g_ort, same_labels, labels, num_labels, num_labels_size, threshold, num_texts, classification_type);
-
+    end = clock();
+    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+    printf("Время выполнения: %f секунд\n", cpu_time_used);
 
     ///////////// Free mem /////////////
     free_prepared_inputs(prepared_inputs, num_texts);
