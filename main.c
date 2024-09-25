@@ -30,6 +30,8 @@ float threshold = 0.5f;
 
 const OrtApi* g_ort = NULL;
 
+#define BATCH_SIZE 32
+
 int main(int argc, char *argv[]) {
     if (argc < 2) {
         printf("Usage: %s /path/to/your_data.json\n", argv[0]);
@@ -81,57 +83,69 @@ int main(int argc, char *argv[]) {
     printf("DONE: create_tokenizer;\n");  
     
     ////////////////////////////////////////////////
-    
+    //////////////////// INFERENCE START ////////////
     start = clock();
-    char** prepared_inputs = prepare_inputs(texts, labels, num_texts, num_labels, same_labels, prompt_first);
-    printf("DONE: prepared_inputs;\n");  
+    for (size_t i = 0; i < num_texts; i += BATCH_SIZE) {
+        size_t current_batch_size = (i + BATCH_SIZE > num_texts) ? (num_texts - i) : BATCH_SIZE;
+        
+        printf("Processing batch %zu to %zu\n", i, i + current_batch_size - 1);
+
+        ///////////// Prepare inputs for batch /////////////
+        char** batch_texts = &texts[i];
+        char*** batch_labels = (same_labels) ? labels : &labels[i];
+        size_t* batch_num_labels = (same_labels) ? num_labels : &num_labels[i];
+
+        char** prepared_inputs = prepare_inputs(batch_texts, batch_labels, current_batch_size, batch_num_labels, same_labels, prompt_first);
+        printf("DONE: prepared_inputs;\n");  
     
 
-    ///////////// Tokenize /////////////
-    TokenizedInputs tokenized = tokenize_inputs(tokenizer_handler, prepared_inputs, num_texts, max_length);
-    printf("DONE: tokenize_inputs;\n");  
+        ///////////// Tokenize /////////////
+        TokenizedInputs tokenized = tokenize_inputs(tokenizer_handler, prepared_inputs, current_batch_size, max_length);
+        printf("DONE: tokenize_inputs for batch;\n"); 
 
 
-    ///////////// ONNX /////////////
-    OrtValue* input_ids_tensor = NULL;
-    OrtValue* attention_mask_tensor = NULL;    
+        ///////////// ONNX /////////////
+        OrtValue* input_ids_tensor = NULL;
+        OrtValue* attention_mask_tensor = NULL;    
 
-    if (prepare_input_tensors(&tokenized, &input_ids_tensor,  &attention_mask_tensor) != 0) {
-        fprintf(stderr, "Error: Failed to prepare input tensors.\n");
-        // Free mem
-        g_ort->ReleaseSession(session);
-        g_ort->ReleaseEnv(env);
-        return -1;
-    }
-    printf("DONE: prepare_input_tensors\n");
+        if (prepare_input_tensors(&tokenized, &input_ids_tensor,  &attention_mask_tensor) != 0) {
+            fprintf(stderr, "Error: Failed to prepare input tensors.\n");
+            // Free mem
+            g_ort->ReleaseSession(session);
+            g_ort->ReleaseEnv(env);
+            return -1;
+        }
+        printf("DONE: prepare_input_tensors for batch\n");
 
 
-    ///////////// Run inference /////////////
-    OrtValue* output_tensor = run_inference(session, input_ids_tensor, attention_mask_tensor);
-    if (output_tensor == NULL) {
-        fprintf(stderr, "Model inference error.\n");
-        // Free mem
+        ///////////// Run inference /////////////
+        OrtValue* output_tensor = run_inference(session, input_ids_tensor, attention_mask_tensor);
+        if (output_tensor == NULL) {
+            fprintf(stderr, "Model inference error.\n");
+            // Free mem
+            g_ort->ReleaseValue(input_ids_tensor);
+            g_ort->ReleaseValue(attention_mask_tensor);
+            g_ort->ReleaseSession(session);
+            g_ort->ReleaseEnv(env);
+            return -1;
+        }
+        printf("DONE: run_inference for batch\n");
+
+
+        ///////////// Decoding /////////////
+        process_output_tensor(output_tensor, g_ort, same_labels, batch_labels, batch_num_labels, num_labels_size, threshold, current_batch_size, classification_type);
+        ///////////// Free batch resources /////////////
+        free_prepared_inputs(prepared_inputs, current_batch_size);
+        free_tokenized_inputs(&tokenized);
         g_ort->ReleaseValue(input_ids_tensor);
         g_ort->ReleaseValue(attention_mask_tensor);
-        g_ort->ReleaseSession(session);
-        g_ort->ReleaseEnv(env);
-        return -1;
+        g_ort->ReleaseValue(output_tensor);
     }
-    printf("DONE: run_inference\n\n");
-
-
-    ///////////// Decoding /////////////
-    process_output_tensor(output_tensor, g_ort, same_labels, labels, num_labels, num_labels_size, threshold, num_texts, classification_type);
     end = clock();
     cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
     printf("Время выполнения: %f секунд\n", cpu_time_used);
 
-    ///////////// Free mem /////////////
-    free_prepared_inputs(prepared_inputs, num_texts);
-    free_tokenized_inputs(&tokenized);
     tokenizers_free(tokenizer_handler);
-    g_ort->ReleaseSession(session);
-    g_ort->ReleaseEnv(env);
 
     return 0;
 }
