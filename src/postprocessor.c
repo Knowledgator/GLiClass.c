@@ -12,7 +12,7 @@ float sigmoid(float x) {
 
 // Function for processing the output tensor (logits)
 void process_output_tensor(OrtValue* output_tensor, const OrtApi* g_ort, bool same_labels, char*** labels,
-                            size_t* num_labels, size_t num_labels_size, float threshold, size_t num_texts,
+                            size_t* num_labels, size_t num_labels_size, float threshold, size_t num_texts, char** texts,
                             char* classification_type) {
     OrtStatus* status = NULL;
 
@@ -69,7 +69,7 @@ void process_output_tensor(OrtValue* output_tensor, const OrtApi* g_ort, bool sa
     int num_classes = dims[1];
     if (strcmp(classification_type, "multi-label") == 0) {    
         for (int i = 0; i < batch_size; i++) {
-            printf("Text %d:\n", i + 1);
+            printf("Text: %s:\n", texts[i]);
             for (int j = 0; j < num_classes; j++) {
                 float logit = output_data[i * num_classes + j];
                 float prob = sigmoid(logit);  // sigmoid function
@@ -97,7 +97,7 @@ void process_output_tensor(OrtValue* output_tensor, const OrtApi* g_ort, bool sa
         }
     } else if (strcmp(classification_type, "single-label") == 0){
         for (int i = 0; i < batch_size; i++) {
-            printf("Text %d:\n", i + 1);
+            printf("Text: %s:\n", texts[i]);
             float max_prob = 0.0f;
             int max_idx = -1;
             for (int j = 0; j < num_classes; j++) {

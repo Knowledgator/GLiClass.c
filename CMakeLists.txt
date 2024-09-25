@@ -96,6 +96,9 @@ add_subdirectory(${TOKENIZER_CPP_PATH} tokenizers EXCLUDE_FROM_ALL)
 # Add cJSON as a subdirectory
 add_subdirectory(${CJSON_PATH} cJSON EXCLUDE_FROM_ALL)
 
+# Find OpenMP package
+find_package(OpenMP REQUIRED)
+
 # Add the executable (your main C file)
 add_executable(GLiClass
                 src/postprocessor.c
@@ -109,4 +112,4 @@ add_executable(GLiClass
 target_include_directories(GLiClass PRIVATE ${TOKENIZER_CPP_PATH}/include ${CJSON_PATH} ${ONNXRUNTIME_PATH}/include)
 
 # Link tokenizers-cpp libraries
-target_link_libraries(GLiClass tokenizers_cpp cjson ${ONNXRUNTIME_LIB})
+target_link_libraries(GLiClass tokenizers_cpp cjson ${ONNXRUNTIME_LIB} OpenMP::OpenMP_C)

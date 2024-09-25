@@ -146,7 +146,7 @@ OrtValue* run_inference(OrtSession* session, OrtValue* input_ids_tensor, OrtValu
     return output_tensor;
 }
 
-OrtSession* create_ort_session(OrtEnv* env, const char* model_path) {
+OrtSession* create_ort_session(OrtEnv* env, const char* model_path, int num_threads) {
     OrtSessionOptions* session_options = NULL;
     OrtSession* session = NULL;
     OrtStatus* status = NULL;
@@ -157,6 +157,26 @@ OrtSession* create_ort_session(OrtEnv* env, const char* model_path) {
         const char* msg = g_ort->GetErrorMessage(status);
         fprintf(stderr, "Error: Failed to create session options: %s\n", msg);
         g_ort->ReleaseStatus(status);
+        return NULL;
+    }
+
+    // Set the number of threads for intra-op operations
+    status = g_ort->SetIntraOpNumThreads(session_options, num_threads);
+    if (status != NULL) {
+        const char* msg = g_ort->GetErrorMessage(status);
+        fprintf(stderr, "Error: Failed to set intra-op threads: %s\n", msg);
+        g_ort->ReleaseStatus(status);
+        g_ort->ReleaseSessionOptions(session_options);
+        return NULL;
+    }
+
+    // Set the number of threads for inter-op operations
+    status = g_ort->SetInterOpNumThreads(session_options, num_threads);
+    if (status != NULL) {
+        const char* msg = g_ort->GetErrorMessage(status);
+        fprintf(stderr, "Error: Failed to set inter-op threads: %s\n", msg);
+        g_ort->ReleaseStatus(status);
+        g_ort->ReleaseSessionOptions(session_options);
         return NULL;
     }
 
