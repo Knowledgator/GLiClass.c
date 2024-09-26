@@ -47,7 +47,7 @@ Before run make sure you have **jq** package installed
 sudo apt-get update
 sudo apt-get install jq
 ```
-This script will download all configurations for model from [Knowledgator Hugging Face](https://huggingface.co/knowledgator)
+This script will download all configurations for model from [Knowledgator GLiClass collection](https://huggingface.co/collections/knowledgator/gliclass-6661838823756265f2ac3848)
 ```
 ./run_GLiClass.sh knowledgator/gliclass-base-v1.0 /path/to/your_data.json
 ```
