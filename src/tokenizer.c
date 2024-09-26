@@ -6,6 +6,16 @@
 
 #include "tokenizer.h"
 
+/**
+ * Tokenizes a batch of input texts using the provided tokenizer.
+ *
+ * @param tokenizer The tokenizer handle to use for tokenization.
+ * @param inputs An array of input texts to be tokenized.
+ * @param num_texts The number of input texts in the batch.
+ * @param max_length The maximum length of tokens for each text. Sequences longer than this will be truncated.
+ * @return A TokenizedInputs structure containing token IDs, token type IDs, and attention masks for the input texts.
+ *         The caller is responsible for freeing the memory allocated for the returned structure.
+ */
 TokenizedInputs tokenize_inputs(TokenizerHandle tokenizer, const char* inputs[], size_t num_texts, size_t max_length) {
     TokenizerEncodeResult* results = (TokenizerEncodeResult*)malloc(num_texts * sizeof(TokenizerEncodeResult));
     if (!results) {
@@ -72,6 +82,11 @@ TokenizedInputs tokenize_inputs(TokenizerHandle tokenizer, const char* inputs[],
     return tokenized;
 }
 
+/**
+ * Prints the tokenized inputs including input IDs, token type IDs, and attention masks for each input text.
+ *
+ * @param tokenized Pointer to the TokenizedInputs structure to be printed.
+ */
 void print_tokenized_inputs(const TokenizedInputs* tokenized) {
     for (size_t i = 0; i < tokenized->batch_size; ++i) {
         printf("Input %zu:\n", i);
@@ -95,6 +110,11 @@ void print_tokenized_inputs(const TokenizedInputs* tokenized) {
     }
 }
 
+/**
+ * Frees the memory allocated for the tokenized inputs including input IDs, token type IDs, and attention masks.
+ *
+ * @param tokenized Pointer to the TokenizedInputs structure to be freed.
+ */
 void free_tokenized_inputs(TokenizedInputs* tokenized) {
     for (size_t i = 0; i < tokenized->batch_size; ++i) {
         free(tokenized->input_ids[i]);
@@ -106,6 +126,13 @@ void free_tokenized_inputs(TokenizedInputs* tokenized) {
     free(tokenized->attention_mask);
 }
 
+/**
+ * Creates a tokenizer handle from a JSON configuration file.
+ *
+ * @param filepath The path to the JSON file containing tokenizer settings.
+ * @return A TokenizerHandle initialized with the tokenizer settings from the file, or NULL if the file could not be read.
+ *         The caller is responsible for freeing the tokenizer handle after use.
+ */
 TokenizerHandle create_tokenizer(const char* filepath) {
     // Read tokenizer.json
     FILE* file = fopen(filepath, "rb");

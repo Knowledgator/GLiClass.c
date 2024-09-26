@@ -5,12 +5,30 @@
 #include "onnxruntime_c_api.h"
 #include "postprocessor.h"
 
-// Sigmoid function 
+/**
+ * Sigmoid function to map logits to probabilities.
+ * 
+ * @param x The input value (logit).
+ * @return The probability corresponding to the logit, calculated using the sigmoid function.
+ */
 float sigmoid(float x) {
     return 1.0f / (1.0f + expf(-x));
 }
 
-// Function for processing the output tensor (logits)
+/**
+ * Processes the output tensor (logits) and prints the predicted labels and scores based on the given classification type (multi-label or single-label).
+ * 
+ * @param output_tensor A pointer to the OrtValue containing the output logits from the ONNX model.
+ * @param g_ort A pointer to the ONNX Runtime API.
+ * @param same_labels Boolean indicating if all texts share the same set of labels.
+ * @param labels A 2D array of strings containing the labels for each class.
+ * @param num_labels A dynamic array indicating the number of labels for each text.
+ * @param num_labels_size The number of labels if all texts share the same set.
+ * @param threshold The probability threshold for multi-label classification.
+ * @param num_texts The number of texts in the batch.
+ * @param texts A dynamic array containing the input texts.
+ * @param classification_type A string specifying the type of classification ("multi-label" or "single-label").
+ */
 void process_output_tensor(OrtValue* output_tensor, const OrtApi* g_ort, bool same_labels, char*** labels,
                             size_t* num_labels, size_t num_labels_size, float threshold, size_t num_texts, char** texts,
                             char* classification_type) {
