@@ -36,11 +36,12 @@ const OrtApi* g_ort = NULL;         // Global pointer to ONNX Runtime API for pe
  * @return 0 if successful, or 1 if an error occurs (e.g., invalid arguments or failed initialization).
  */
 int main(int argc, char *argv[]) {
-    if (argc < 2) {
-        printf("Usage: %s /path/to/your_data.json\n", argv[0]);
+    if (argc < 3) {
+        printf("Usage: %s /path/to/your_data.json [prompt_first: true/false]\n", argv[0]);
         printf("NOTE: use this option only if you sure that all required model parts are initialized correctly\n\n");
         printf("Recomended option\n");
         printf("Usage: ./run_GLiClass.sh knowledgator/gliclass-small-v1.0 /path/to/your_data.json\n");
+        printf("This option will automaticly set up prompt_first for you\n");
         return 1;
     }
     // reading data from json file
@@ -48,6 +49,7 @@ int main(int argc, char *argv[]) {
     if (!json_string) {
         return 1;
     }
+    bool prompt_first = string_to_bool(argv[2]);
 
     // clock_t start, end;
     // double cpu_time_used;
@@ -55,7 +57,6 @@ int main(int argc, char *argv[]) {
 
     ///////////// Prepare inputs /////////////
     parse_json(json_string, &texts, &num_texts, &labels, &num_labels, &num_labels_size, &same_labels, &classification_type);
-    bool prompt_first = false;
     printf("DONE: parse_json;\n");
     if (classification_type == NULL){
         printf("classification type is not provided\n");

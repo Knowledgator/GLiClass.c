@@ -133,3 +133,27 @@ void parse_json(const char* json_string, char*** texts, size_t* num_texts, char*
     }
     cJSON_Delete(json);  // free memory
 }
+
+/**
+ * Converts a string to a boolean value.
+ * 
+ * Accepts the following string values:
+ * - "true" or "1" will return true
+ * - "false" or "0" will return false
+ * 
+ * If the string does not match these values, the function prints an error message
+ * and exits the program with code 1.
+ *
+ * @param str The string to convert to a boolean. Expected values are "true", "false", "1", or "0".
+ * @return true if the input is "true" or "1", false if the input is "false" or "0".
+ */
+bool string_to_bool(const char *str) {
+    if (strcmp(str, "true") == 0 || strcmp(str, "1") == 0) {
+        return true;
+    } else if (strcmp(str, "false") == 0 || strcmp(str, "0") == 0) {
+        return false;
+    } else {
+        printf("Invalid value for bool argument. Use 'true' or 'false'.\n");
+        exit(1);
+    }
+}

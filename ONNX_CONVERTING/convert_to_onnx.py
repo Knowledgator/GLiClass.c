@@ -16,10 +16,11 @@ def get_original_logits(model, tokenized_inputs) -> list:
 
     return logits.tolist()
 
-def create_config(original_model_name, architecture_type, original_logits, save_path) -> None:
+def create_config(original_model_name, architecture_type, prompt_first, original_logits, save_path) -> None:
     data = {
         "original_model_name" : original_model_name,
         "architecture_type" : architecture_type,
+        "prompt_first" : prompt_first, 
         "original_logits" : original_logits
     }
 
@@ -46,6 +47,7 @@ if __name__ == "__main__":
     print("Loading a model...")
     gliclass_model = GLiClassModel.from_pretrained(args.model_path)
     architecture_type = gliclass_model.config.architecture_type
+    prompt_first = gliclass_model.config.prompt_first
     if architecture_type != 'uni-encoder':
         raise NotImplementedError("This artchitecture is not implemented for ONNX yet")
     
@@ -90,6 +92,7 @@ if __name__ == "__main__":
     create_config(
         original_model_name = args.model_path,
         architecture_type = architecture_type,
+        prompt_first= prompt_first,
         original_logits = get_original_logits(gliclass_model, tokenized_inputs),
         save_path = config_path
     )
