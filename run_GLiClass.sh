@@ -68,7 +68,7 @@ else
         FILES=($TOKENIZER_FILE $MODEL_ONNX_FILE)
         for FILE in "${FILES[@]}"; do
             if [ ! -f "$FILE" ]; then
-                echo "Missing file: $FILE. Downloading..."
+                echo "Missing file: $FILE. Downloading..." 
 
                 if [ "$FILE" == "$TOKENIZER_FILE" ]; then
                     download_file "tokenizer config" "$TOKENIZER_DIR" "$TOKENIZER_URL"
@@ -81,6 +81,12 @@ else
     fi
     echo "Everithing was set up. Running inference"
 fi
+PROMPT_FIRST=$(jq -r '.prompt_first' "$MODEL_CONFIG_FILE")
+if [ "$PROMPT_FIRST" != "true" ] && [ "$PROMPT_FIRST" != "false" ]; then
+    echo "Something wrong with model configuration file."
+    echo "Expected values: 'true' or 'false' but recived: "$PROMPT_FIRST
+    exit 1
+fi
 
 # run
-./build/GLiClass $2
+./build/GLiClass $2 $PROMPT_FIRST
