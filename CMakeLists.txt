@@ -10,7 +10,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Include the headers
 include_directories(include)
 
-# Добавить опцию для выбора между CPU и GPU
+# Add option to choose between CPU and GPU
 set(BUILD_TARGET "CPU" CACHE STRING "Choose the build target: CPU or GPU")
 set_property(CACHE BUILD_TARGET PROPERTY STRINGS "CPU" "GPU")
 
@@ -24,7 +24,7 @@ set(ONNXRUNTIME_GPU_PATH "./onnxruntime-linux-x64-gpu-1.19.2")
 set(ONNXRUNTIME_CPU_PATH "./onnxruntime-linux-x64-1.19.2")
 
 if(BUILD_TARGET STREQUAL "GPU")
-  # Выполняем проверки наличия GPU, NVIDIA и cuDNN
+  # Perform checks for GPU, NVIDIA and cuDNN availability
   execute_process(
     COMMAND nvidia-smi
     RESULT_VARIABLE NVIDIA_SMI_RESULT
