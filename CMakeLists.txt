@@ -63,7 +63,7 @@ if(BUILD_TARGET STREQUAL "GPU")
     message(FATAL_ERROR "cuDNN not found. Ensure that cuDNN is installed and available in the system paths. Aborting GPU build.")
   endif()
 
-  # Если все проверки пройдены, пробуем использовать версию ONNXRuntime для GPU
+  # If all checks are passed, we try to use the GPU version of ONNXRuntime
   find_library(ONNXRUNTIME_LIB
     NAMES onnxruntime libonnxruntime
     PATHS "${ONNXRUNTIME_GPU_PATH}/lib"
@@ -80,7 +80,7 @@ if(BUILD_TARGET STREQUAL "GPU")
 
 endif()
 
-# Если выбран CPU или не найдена GPU версия
+# If CPU is selected
 if(BUILD_TARGET STREQUAL "CPU")
   message(STATUS "Using CPU version of ONNXRuntime.")
   find_library(ONNXRUNTIME_LIB
