@@ -11,8 +11,93 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include_directories(include)
 
 ############################################ ONNNX ###########################################
-# Path to ONNXRuntime
-set(ONNXRUNTIME_PATH "./onnxruntime-linux-x64-1.19.2")
+# Path to ONNXRuntime GPU
+set(ONNXRUNTIME_GPU_PATH "./onnxruntime-linux-x64-gpu-1.19.2")
+# Path to ONNXRuntime CPU
+set(ONNXRUNTIME_CPU_PATH "./onnxruntime-linux-x64-1.19.2")
+
+# Check if all requierments for NVIDIA GPU are available
+execute_process(
+  COMMAND nvidia-smi
+  RESULT_VARIABLE NVIDIA_SMI_RESULT
+  OUTPUT_QUIET
+  ERROR_QUIET
+)
+
+execute_process(
+  COMMAND nvcc --version
+  RESULT_VARIABLE NVCC_RESULT
+  OUTPUT_QUIET
+  ERROR_QUIET
+)
+if(NOT NVIDIA_SMI_RESULT EQUAL 0)
+  message(WARNING "NVIDIA GPU driver was not detected or nvidia-smi command not avaliable")
+endif()
+if(NOT NVCC_RESULT EQUAL 0)
+  message(WARNING "NVIDIA GPU compiler was not detected or nvcc --version command not avaliable")
+endif()
+
+find_library(CUDNN_LIB
+  NAMES libcudnn.so libcudnn.so.8 libcudnn.so.7
+  PATHS /usr/local/cuda/lib64 /usr/lib/x86_64-linux-gnu
+  DOC "Path to cuDNN library"
+)
+
+find_path(CUDNN_INCLUDE_DIR
+  NAMES cudnn.h
+  PATHS /usr/local/cuda/include /usr/include
+  DOC "Path to cuDNN headers"
+)
+
+set(CUDNN False CACHE BOOL "cuDNN support")
+if (CUDNN_LIB AND CUDNN_INCLUDE_DIR)
+  set(CUDNN True)
+  message(STATUS "cuDNN library found: ${CUDNN_LIB}")
+  message(STATUS "cuDNN headers found: ${CUDNN_INCLUDE_DIR}")
+  add_definitions(-DUSE_CUDNN)
+  include_directories(${CUDNN_INCLUDE_DIR})
+else()
+  set(CUDNN False)
+  message(WARNING "cuDNN not found. Ensure that cuDNN is installed and available in the system paths.")
+endif()
+
+if(NVIDIA_SMI_RESULT EQUAL 0 AND NVCC_RESULT EQUAL 0 AND CUDNN)
+  message(STATUS "NVIDIA GPU detected. All required dependencies were found. Attempting to use GPU version of ONNXRuntime.")
+  
+  # Try to find GPU version
+  find_library(ONNXRUNTIME_LIB
+    NAMES onnxruntime libonnxruntime
+    PATHS "${ONNXRUNTIME_GPU_PATH}/lib"
+    NO_DEFAULT_PATH
+  )
+  
+  if(ONNXRUNTIME_LIB)
+    set(ONNXRUNTIME_PATH ${ONNXRUNTIME_GPU_PATH})
+    message(WARNING "Using GPU version of ONNXRuntime")
+    add_definitions(-DUSE_CUDA)
+  else()
+    message(WARNING "GPU detected, but GPU version of ONNXRuntime not found. Falling back to CPU version.")
+  endif()
+else()
+  message(STATUS "NVIDIA GPU not detected. Using CPU version of ONNXRuntime.")
+endif()
+
+# If GPU version not found or not available, use CPU version
+if(NOT ONNXRUNTIME_LIB)
+  find_library(ONNXRUNTIME_LIB
+    NAMES onnxruntime libonnxruntime
+    PATHS "${ONNXRUNTIME_CPU_PATH}/lib"
+    NO_DEFAULT_PATH
+  )
+  
+  if(NOT ONNXRUNTIME_LIB)
+    message(FATAL_ERROR "Neither GPU nor CPU version of ONNXRuntime library found. Please check the library paths or download them from official site:\n
+                          https://github.com/microsoft/onnxruntime/releases.")
+  else()
+    set(ONNXRUNTIME_PATH ${ONNXRUNTIME_CPU_PATH})
+    message(WARNING "Using CPU version of ONNXRuntime")
+  endif()
+endif()
 
 # Include directories for ONNXRuntime
 include_directories(
@@ -20,18 +105,6 @@ include_directories(
   "${ONNXRUNTIME_PATH}/include/onnxruntime"
   "${ONNXRUNTIME_PATH}/include/onnxruntime/core/session"
 )
-
-# Find ONNXRuntime library
-find_library(ONNXRUNTIME_LIB
-  NAMES onnxruntime libonnxruntime
-  PATHS "${ONNXRUNTIME_PATH}/lib"
-  NO_DEFAULT_PATH
-)
-
-if(NOT ONNXRUNTIME_LIB)
-  message(FATAL_ERROR "ONNXRuntime library not found. Please check the library path.")
-endif()
-
 ###########################################
 
 # Path for tokenizers-cpp
@@ -46,6 +119,8 @@ add_subdirectory(${TOKENIZER_CPP_PATH} tokenizers EXCLUDE_FROM_ALL)
 # Add cJSON as a subdirectory
 add_subdirectory(${CJSON_PATH} cJSON EXCLUDE_FROM_ALL)
 
+# Find OpenMP package
+find_package(OpenMP REQUIRED)
 
 # Add the executable (your main C file)
 add_executable(GLiClass
@@ -60,5 +135,4 @@ add_executable(GLiClass
 target_include_directories(GLiClass PRIVATE ${TOKENIZER_CPP_PATH}/include ${CJSON_PATH} ${ONNXRUNTIME_PATH}/include)
 
 # Link tokenizers-cpp libraries
-target_link_libraries(GLiClass tokenizers_cpp cjson ${ONNXRUNTIME_LIB})
-
+target_link_libraries(GLiClass tokenizers_cpp cjson ${ONNXRUNTIME_LIB} OpenMP::OpenMP_C)

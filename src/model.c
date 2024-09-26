@@ -5,7 +5,15 @@
 #include "model.h"
 
 ////////////////////////////////////////////////////////// TO TENSORS //////////////////////////////////////////////////////
-// Function to convert 2D int array to 1D int64_t array
+/**
+ * Flattens a 2D array of integers into a 1D array of int64_t for use in tensor creation.
+ * 
+ * @param data A 2D array of integers.
+ * @param rows The number of rows in the 2D array.
+ * @param cols The number of columns in the 2D array.
+ * @return A pointer to a dynamically allocated 1D int64_t array.
+ *         The caller is responsible for freeing the allocated memory.
+ */
 int64_t* flatten_int_array(int** data, size_t rows, size_t cols) {
     int64_t* flat_data = (int64_t*)malloc(rows * cols * sizeof(int64_t));
     if (!flat_data) {
@@ -20,7 +28,14 @@ int64_t* flatten_int_array(int** data, size_t rows, size_t cols) {
     return flat_data;
 }
 
-// Function to create a tensor from data
+/**
+ * Creates a tensor from flattened data.
+ * 
+ * @param data A 1D array of int64_t representing the flattened tensor data.
+ * @param rows The number of rows in the tensor.
+ * @param cols The number of columns in the tensor.
+ * @return A pointer to an OrtValue representing the tensor, or NULL if tensor creation fails.
+ */
 OrtValue* create_tensor(int64_t* data, size_t rows, size_t cols) {
     OrtMemoryInfo* memory_info = NULL;
     OrtStatus* status = g_ort->CreateCpuMemoryInfo(OrtArenaAllocator, OrtMemTypeDefault, &memory_info);
@@ -55,7 +70,14 @@ OrtValue* create_tensor(int64_t* data, size_t rows, size_t cols) {
     return tensor;
 }
 
-// Function for preparing input tensors
+/**
+ * Prepares input tensors for the ONNX model using tokenized input data.
+ * 
+ * @param tokenized A pointer to the TokenizedInputs structure containing the tokenized data.
+ * @param input_ids_tensor A pointer to the OrtValue that will store the input IDs tensor.
+ * @param attention_mask_tensor A pointer to the OrtValue that will store the attention mask tensor.
+ * @return 0 if successful, -1 if an error occurs during tensor preparation.
+ */
 int prepare_input_tensors(TokenizedInputs* tokenized, OrtValue** input_ids_tensor, OrtValue** attention_mask_tensor) {
     // preparing input_ids
     int64_t* input_ids_data = flatten_int_array(tokenized->input_ids, tokenized->batch_size, tokenized->seq_length);
@@ -89,7 +111,14 @@ int prepare_input_tensors(TokenizedInputs* tokenized, OrtValue** input_ids_tenso
 
 
 ////////////////////////////////////////////////////// ONNX ////////////////////////////////////////////////////////////////////////
-// Function to run model inference
+/**
+ * Runs inference using the ONNX model session and input tensors.
+ * 
+ * @param session A pointer to the ONNX model session.
+ * @param input_ids_tensor A pointer to the OrtValue representing the input IDs tensor.
+ * @param attention_mask_tensor A pointer to the OrtValue representing the attention mask tensor.
+ * @return A pointer to an OrtValue containing the model's output, or NULL if inference fails.
+ */
 OrtValue* run_inference(OrtSession* session, OrtValue* input_ids_tensor, OrtValue* attention_mask_tensor) {
     OrtStatus* status = NULL;
 
@@ -146,7 +175,15 @@ OrtValue* run_inference(OrtSession* session, OrtValue* input_ids_tensor, OrtValu
     return output_tensor;
 }
 
-OrtSession* create_ort_session(OrtEnv* env, const char* model_path) {
+/**
+ * Creates and initializes an ONNX Runtime session from a model file.
+ * 
+ * @param env A pointer to the ONNX Runtime environment.
+ * @param model_path The file path to the ONNX model.
+ * @param num_threads The number of threads to use for inference (CPU only).
+ * @return A pointer to the OrtSession if successful, or NULL if an error occurs.
+ */
+OrtSession* create_ort_session(OrtEnv* env, const char* model_path, int num_threads) {
     OrtSessionOptions* session_options = NULL;
     OrtSession* session = NULL;
     OrtStatus* status = NULL;
@@ -159,6 +196,43 @@ OrtSession* create_ort_session(OrtEnv* env, const char* model_path) {
         g_ort->ReleaseStatus(status);
         return NULL;
     }
+
+    // Set the number of threads for intra-op operations
+    status = g_ort->SetIntraOpNumThreads(session_options, num_threads);
+    if (status != NULL) {
+        const char* msg = g_ort->GetErrorMessage(status);
+        fprintf(stderr, "Error: Failed to set intra-op threads: %s\n", msg);
+        g_ort->ReleaseStatus(status);
+        g_ort->ReleaseSessionOptions(session_options);
+        return NULL;
+    }
+
+    // Set the number of threads for inter-op operations
+    status = g_ort->SetInterOpNumThreads(session_options, num_threads);
+    if (status != NULL) {
+        const char* msg = g_ort->GetErrorMessage(status);
+        fprintf(stderr, "Error: Failed to set inter-op threads: %s\n", msg);
+        g_ort->ReleaseStatus(status);
+        g_ort->ReleaseSessionOptions(session_options);
+        return NULL;
+    }
+
+    #ifdef USE_CUDA // GPU
+    int device_id = 0;
+    status = OrtSessionOptionsAppendExecutionProvider_CUDA(session_options, device_id);
+    if (status != NULL) {
+        const char* msg = g_ort->GetErrorMessage(status);
+        fprintf(stderr, "Error: Failed to add CUDA Execution Provider: %s\n", msg);
+        g_ort->ReleaseStatus(status);
+        g_ort->ReleaseSessionOptions(session_options);
+        return NULL;
+    }
+    g_ort->SetSessionGraphOptimizationLevel(session_options, ORT_ENABLE_ALL);
+    printf("\tCUDA Execution Provider added successfully.\n");
+    #else
+    printf("\tUsing CPU Execution Provider.\n");
+    #endif
+    
 
     // Load the model and create a session
     status = g_ort->CreateSession(env, model_path, session_options, &session);
@@ -175,6 +249,11 @@ OrtSession* create_ort_session(OrtEnv* env, const char* model_path) {
     return session;
 }
 
+/**
+ * Initializes the ONNX Runtime environment.
+ * 
+ * @return A pointer to the OrtEnv, or NULL if environment creation fails.
+ */
 OrtEnv* initialize_ort_environment() {
     OrtEnv* env = NULL;
     OrtStatus* status = g_ort->CreateEnv(ORT_LOGGING_LEVEL_WARNING, "GLiClass", &env);
@@ -187,6 +266,9 @@ OrtEnv* initialize_ort_environment() {
     return env;
 }
 
+/**
+ * Initializes the ONNX Runtime API.
+ */
 void initialize_ort_api() {
     g_ort = OrtGetApiBase()->GetApi(ORT_API_VERSION);
 }
