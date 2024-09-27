@@ -15,7 +15,7 @@ It can be used for topic classification, sentiment analysis and as a reranker in
     <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
     <a href="https://huggingface.co/spaces/knowledgator/GLiClass_SandBox">🤗 Space</a>
     <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
-    <a href="https://huggingface.co/models?library=gliner&sort=trending">🤗 GliClass Collection</a>
+    <a href="https://huggingface.co/collections/knowledgator/gliclass-6661838823756265f2ac3848">🤗 GliClass Collection</a>
 </p>
 
 ## 🛠 Build
