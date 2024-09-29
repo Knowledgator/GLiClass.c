@@ -143,11 +143,25 @@ or
         ["format","model","tool","cat"],
         ["question","tool","statement"],
         ["call to action", "necessity"],
-        ]
+        ],
     "same_labels": false,
     "classification_type": "single-label" 
 }
 ```
+## Docker 
+Also some GLiClass models already have their own dockerized version, you can find them on our [official dockerhub](https://hub.docker.com/repositories/knowledgator)
+  
+General principle of using dockerized models
+1. Pull the image:
+    ```bash
+    docker pull knowledgator/gliclass-specific-version
+    ```
+2. Run the container:
+    ```bash
+    docker run -v /path/to/folder_with_data:/app/data knowledgator/gliclass-specific-version /app/your_data.json
+    ```  
+More detailed instructions are available in the dockerhub repositories.
+
 ## Convert your model
 If the GLiClass model you need does not yet have an onnx version, you can create it yourself using our script.
 ```
