@@ -96,7 +96,7 @@ void process_output_tensor(OrtValue* output_tensor, const OrtApi* g_ort, bool sa
                     const char* label = NULL;
                     if (same_labels) {
                         if (j < num_labels_size) {
-                            label = labels[j];
+                            label = labels[0][j];
                         }
                     } else {
                         if (i < num_texts   && j < num_labels[i]) {
@@ -130,7 +130,7 @@ void process_output_tensor(OrtValue* output_tensor, const OrtApi* g_ort, bool sa
             const char* label = NULL;
             if (same_labels) {
                 if (max_idx < num_labels_size) {
-                    label = labels[max_idx];
+                    label = labels[0][max_idx];
                 }
             } else {
                 if (i < num_texts && max_idx < num_labels[i]) {
@@ -150,6 +150,7 @@ void process_output_tensor(OrtValue* output_tensor, const OrtApi* g_ort, bool sa
     }
 
 
-    free(dims);
-    g_ort->ReleaseTensorTypeAndShapeInfo(type_info);
+    if (dims) free(dims);
+    if (type_info) g_ort->ReleaseTensorTypeAndShapeInfo(type_info);
+    if (status) g_ort->ReleaseStatus(status);
 }

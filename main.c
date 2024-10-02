@@ -7,6 +7,7 @@
 #include <omp.h>
 
 // Project includes (folder include)
+#include "read_data.h"
 #include "postprocessor.h"
 #include "model.h"
 #include "tokenizer.h" 
@@ -50,11 +51,6 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     bool prompt_first = string_to_bool(argv[2]);
-
-    // clock_t start, end;
-    // double cpu_time_used;
-    double start_time, end_time, cpu_time_used;
-
     ///////////// Prepare inputs /////////////
     parse_json(json_string, &texts, &num_texts, &labels, &num_labels, &num_labels_size, &same_labels, &classification_type);
     printf("DONE: parse_json;\n");
@@ -62,6 +58,7 @@ int main(int argc, char *argv[]) {
         printf("classification type is not provided\n");
         return 1;
     }
+    free(json_string);
     ///////////// intializing part /////////////
     TokenizerHandle tokenizer_handler = create_tokenizer(TOKENIZER_PATH);
     if (!tokenizer_handler) {
@@ -90,6 +87,10 @@ int main(int argc, char *argv[]) {
     /////////////////////////////////////////////////////////
     //////////////////// INFERENCE START ////////////////////
     // Start a parallel region using OpenMP to enable multi-threading
+    double start_time, end_time;
+    start_time = omp_get_wtime();
+
+    omp_set_num_threads(6);
     #pragma omp parallel
     {   
         // Use dynamic scheduling to distribute batches across threads
@@ -161,8 +162,12 @@ int main(int argc, char *argv[]) {
             g_ort->ReleaseValue(output_tensor);
         }
     }
+    end_time = omp_get_wtime();
+    printf("Execution time: %f seconds\n", end_time - start_time);
     // Free tokenizer 
     tokenizers_free(tokenizer_handler);
+    g_ort->ReleaseSession(session);
+    g_ort->ReleaseEnv(env);
 
     return 0;
 }

@@ -32,7 +32,7 @@ char** prepare_inputs(const char* texts[], const char* labels[], size_t num_text
     }    
     for (size_t i = 0; i < num_texts; ++i) {
         if (same_labels){
-            inputs[i] = prepare_input(texts[i], labels, num_labels[0], prompt_first);
+            inputs[i] = prepare_input(texts[i], labels[0], num_labels[0], prompt_first);
         } else {
             inputs[i] = prepare_input(texts[i], labels[i], num_labels[i], prompt_first);
         }

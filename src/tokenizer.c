@@ -34,6 +34,13 @@ TokenizedInputs tokenize_inputs(TokenizerHandle tokenizer, const char* inputs[],
 
     // We trim the sequences to max_length and find the maximum length after trimming
     size_t* seq_lengths = (size_t*)malloc(num_texts * sizeof(size_t));
+    if (!seq_lengths) {
+        fprintf(stderr, "Error while allocating memory for sequence lengths\n");
+        free(results);
+        free(input_lengths);
+        exit(1);
+    }
+
     size_t seq_length = 0; // This will be the length of the longest sequence after trimming.
     for (size_t i = 0; i < num_texts; ++i) {
         if (results[i].len > max_length) {
@@ -78,6 +85,7 @@ TokenizedInputs tokenize_inputs(TokenizerHandle tokenizer, const char* inputs[],
 
     tokenizers_free_encode_results(results, num_texts);
     free(input_lengths);
+    free(seq_lengths);
 
     return tokenized;
 }
