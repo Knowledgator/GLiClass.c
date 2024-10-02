@@ -31,7 +31,7 @@ cd GLiClass.c
 git submodule update --init --recursive
 ```
 
-### <img src="https://github.com/user-attachments/assets/4d2fd37f-9882-4fea-902b-be5ccc1edae2" alt="image" height="30" width="30"> CPU build dependencies & instructions
+**📦 CPU build dependencies & instructions**
  - CMake (>= 3.25)
  - [Rust](https://www.rust-lang.org/tools/install)
  - [ONNXRuntime](https://github.com/microsoft/onnxruntime/releases) CPU version for your system
@@ -50,7 +50,7 @@ cd build
 cmake  -DBUILD_TARGET=CPU ..
 make -j8
 ```
-### <img src="https://github.com/user-attachments/assets/92a49538-feb0-4fcb-8789-8d6edfc2ceed" alt="image" height="40" width="40"> GPU build dependencies & instruction
+**📦GPU build dependencies & instruction**
  - CMake (>= 3.25)
  - [Rust](https://www.rust-lang.org/tools/install)
  - [ONNXRuntime](https://github.com/microsoft/onnxruntime/releases) GPU version for yor system
