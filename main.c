@@ -7,6 +7,7 @@
 #include <omp.h>
 
 // Project includes (folder include)
+#include "preprocessor.h"
 #include "read_data.h"
 #include "postprocessor.h"
 #include "model.h"
@@ -90,7 +91,7 @@ int main(int argc, char *argv[]) {
     double start_time, end_time;
     start_time = omp_get_wtime();
 
-    omp_set_num_threads(6);
+    //omp_set_num_threads(6);
     #pragma omp parallel
     {   
         // Use dynamic scheduling to distribute batches across threads
@@ -106,13 +107,17 @@ int main(int argc, char *argv[]) {
 
             ///////////// Prepare inputs for batch /////////////
             // Select the subset of texts and labels for the current batch
-            char** batch_texts = &texts[i];
-            char*** batch_labels = (same_labels) ? labels : &labels[i]; // Choose labels based on whether they are the same for all texts
+            const char** batch_texts = (const char**)&texts[i];
+            const char*** batch_labels = (const char***)(same_labels ? (void*)labels : (void*)&labels[i]); // Choose labels based on whether they are the same for all texts
             size_t* batch_num_labels = (same_labels) ? num_labels : &num_labels[i];
 
             // Prepare the inputs for the current batch, which includes formatting the text and labels
-            char** prepared_inputs = prepare_inputs(batch_texts, batch_labels, current_batch_size, batch_num_labels, same_labels, prompt_first);
-            
+            const char** prepared_inputs = prepare_inputs(batch_texts, batch_labels, current_batch_size, batch_num_labels, same_labels, prompt_first);
+            if (prepared_inputs == NULL) {
+                fprintf(stderr, "prepare_inputs returned NULL for batch %zu to %zu\n", i, i + current_batch_size - 1);
+                free_prepared_inputs((char**)prepared_inputs, current_batch_size);;
+                continue;
+            }
             ///////////// Tokenize /////////////
             // Tokenize the inputs using the tokenizer handler, ensuring the tokenized texts fit within MAX_LENGTH
             TokenizedInputs tokenized = tokenize_inputs(tokenizer_handler, prepared_inputs, current_batch_size, MAX_LENGTH);
@@ -128,7 +133,7 @@ int main(int argc, char *argv[]) {
                     fprintf(stderr, "Error: Failed to prepare input tensors for batch %zu to %zu\n", i, i + current_batch_size - 1);
                 }
                 // Free mem and continue with next batch
-                free_prepared_inputs(prepared_inputs, current_batch_size);
+                free_prepared_inputs((char**)prepared_inputs, current_batch_size);;
                 free_tokenized_inputs(&tokenized);
                 continue;
             }
@@ -143,7 +148,7 @@ int main(int argc, char *argv[]) {
                 // Free mem and continue with next batch
                 g_ort->ReleaseValue(input_ids_tensor);
                 g_ort->ReleaseValue(attention_mask_tensor);
-                free_prepared_inputs(prepared_inputs, current_batch_size);
+                free_prepared_inputs((char**)prepared_inputs, current_batch_size);
                 free_tokenized_inputs(&tokenized);
                 continue;
             }
@@ -155,7 +160,7 @@ int main(int argc, char *argv[]) {
 
             ///////////// Free batch resources /////////////
             // Release memory used by the prepared inputs, tokenized data, and tensors for the current batch
-            free_prepared_inputs(prepared_inputs, current_batch_size);
+            free_prepared_inputs((char**)prepared_inputs, current_batch_size);;
             free_tokenized_inputs(&tokenized);
             g_ort->ReleaseValue(input_ids_tensor);
             g_ort->ReleaseValue(attention_mask_tensor);

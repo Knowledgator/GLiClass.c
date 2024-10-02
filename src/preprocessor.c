@@ -20,7 +20,7 @@
  * @return A dynamically allocated array of strings, where each string contains the prepared input.
  *         The caller is responsible for freeing the memory.
  */
-char** prepare_inputs(const char* texts[], const char* labels[], size_t num_texts,
+const char** prepare_inputs(const char* texts[], const char** const* labels, size_t num_texts,
                     size_t num_labels[], bool same_labels, bool prompt_first){
 
     // Array to store prepared data
@@ -49,7 +49,7 @@ char** prepare_inputs(const char* texts[], const char* labels[], size_t num_text
         
     }
 
-    return inputs;
+    return (const char **)inputs;
 }
 
 
