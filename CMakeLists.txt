@@ -124,6 +124,7 @@ find_package(OpenMP REQUIRED)
 
 # Add the executable (your main C file)
 add_executable(GLiClass
+                src/parallel_processor.c
                 src/postprocessor.c
                 src/model.c
                 src/tokenizer.c

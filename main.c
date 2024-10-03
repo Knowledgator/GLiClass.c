@@ -16,6 +16,7 @@
 #include "read_data.h"
 #include "paths.h"
 #include "configs.h"
+#include "parallel_processor.h"
 
 // Ini variables for data
 char** texts = NULL;                // Array of strings containing texts to classify
@@ -91,81 +92,12 @@ int main(int argc, char *argv[]) {
     double start_time, end_time;
     start_time = omp_get_wtime();
 
-    #pragma omp parallel
-    {   
-        // Use dynamic scheduling to distribute batches across threads
-        #pragma omp for schedule(dynamic)
-        for (size_t i = 0; i < num_texts; i += BATCH_SIZE) {
-            // Calculate the size of the current batch; handle cases where the last batch is smaller than BATCH_SIZE
-            size_t current_batch_size = (i + BATCH_SIZE > num_texts) ? (num_texts - i) : BATCH_SIZE;
-            
-            #pragma omp critical
-            {
-                printf("Thread %d processing batch %zu to %zu\n", omp_get_thread_num(), i, i + current_batch_size - 1);
-            }
-
-            ///////////// Prepare inputs for batch /////////////
-            // Select the subset of texts and labels for the current batch
-            const char** batch_texts = (const char**)&texts[i];
-            const char*** batch_labels = (const char***)(same_labels ? (void*)labels : (void*)&labels[i]); // Choose labels based on whether they are the same for all texts
-            size_t* batch_num_labels = (same_labels) ? num_labels : &num_labels[i];
-
-            // Prepare the inputs for the current batch, which includes formatting the text and labels
-            const char** prepared_inputs = prepare_inputs(batch_texts, batch_labels, current_batch_size, batch_num_labels, same_labels, prompt_first);
-            if (prepared_inputs == NULL) {
-                fprintf(stderr, "prepare_inputs returned NULL for batch %zu to %zu\n", i, i + current_batch_size - 1);
-                free_prepared_inputs((char**)prepared_inputs, current_batch_size);;
-                continue;
-            }
-            ///////////// Tokenize /////////////
-            // Tokenize the inputs using the tokenizer handler, ensuring the tokenized texts fit within MAX_LENGTH
-            TokenizedInputs tokenized = tokenize_inputs(tokenizer_handler, prepared_inputs, current_batch_size, MAX_LENGTH);
-
-            ///////////// ONNX /////////////
-            OrtValue* input_ids_tensor = NULL;
-            OrtValue* attention_mask_tensor = NULL;    
-
-            // Prepare input tensors for the ONNX model; if this fails, log the error and continue to the next batch
-            if (prepare_input_tensors(&tokenized, &input_ids_tensor,  &attention_mask_tensor) != 0) {
-                #pragma omp critical
-                {
-                    fprintf(stderr, "Error: Failed to prepare input tensors for batch %zu to %zu\n", i, i + current_batch_size - 1);
-                }
-                // Free mem and continue with next batch
-                free_prepared_inputs((char**)prepared_inputs, current_batch_size);;
-                free_tokenized_inputs(&tokenized);
-                continue;
-            }
-
-            ///////////// Run inference /////////////
-            OrtValue* output_tensor = run_inference(session, input_ids_tensor, attention_mask_tensor);
-            if (output_tensor == NULL) {
-                #pragma omp critical
-                {
-                    fprintf(stderr, "Model inference error for batch %zu to %zu\n", i, i + current_batch_size - 1);
-                }
-                // Free mem and continue with next batch
-                g_ort->ReleaseValue(input_ids_tensor);
-                g_ort->ReleaseValue(attention_mask_tensor);
-                free_prepared_inputs((char**)prepared_inputs, current_batch_size);
-                free_tokenized_inputs(&tokenized);
-                continue;
-            }
-
-            ///////////// Decoding /////////////
-            // Process the output tensor and decode the classification results for the current batch
-            process_output_tensor(output_tensor, g_ort, same_labels, batch_labels, batch_num_labels, num_labels_size, THRESHOLD,
-                                current_batch_size,batch_texts ,classification_type);
-
-            ///////////// Free batch resources /////////////
-            // Release memory used by the prepared inputs, tokenized data, and tensors for the current batch
-            free_prepared_inputs((char**)prepared_inputs, current_batch_size);;
-            free_tokenized_inputs(&tokenized);
-            g_ort->ReleaseValue(input_ids_tensor);
-            g_ort->ReleaseValue(attention_mask_tensor);
-            g_ort->ReleaseValue(output_tensor);
-        }
-    }
+    int result = process_batches_parallel(
+        (const char**)texts, num_texts, labels, num_labels, num_labels_size,
+        same_labels, prompt_first, classification_type, tokenizer_handler,
+        session, g_ort, THRESHOLD
+    );
+    
     end_time = omp_get_wtime();
     printf("Execution time: %f seconds\n", end_time - start_time);
     // Free tokenizer 
