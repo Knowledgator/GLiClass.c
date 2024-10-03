@@ -91,7 +91,6 @@ int main(int argc, char *argv[]) {
     double start_time, end_time;
     start_time = omp_get_wtime();
 
-    //omp_set_num_threads(6);
     #pragma omp parallel
     {   
         // Use dynamic scheduling to distribute batches across threads

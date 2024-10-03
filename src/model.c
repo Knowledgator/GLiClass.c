@@ -126,7 +126,7 @@ OrtValue* run_inference(OrtSession* session, OrtValue* input_ids_tensor, OrtValu
     OrtAllocator* allocator = NULL;
     char* output_name = NULL;
     
-    // Создаем опции для запуска инференса
+    // Create options to run inference
     status = g_ort->CreateRunOptions(&run_options);
     if (status != NULL) {
         const char* msg = g_ort->GetErrorMessage(status);
@@ -135,7 +135,7 @@ OrtValue* run_inference(OrtSession* session, OrtValue* input_ids_tensor, OrtValu
         return NULL;
     }
 
-    // Получаем дефолтный аллокатор
+    // Get the default allocator
     status = g_ort->GetAllocatorWithDefaultOptions(&allocator);
     if (status != NULL) {
         const char* msg = g_ort->GetErrorMessage(status);
@@ -145,7 +145,7 @@ OrtValue* run_inference(OrtSession* session, OrtValue* input_ids_tensor, OrtValu
         return NULL;
     }
 
-    // Получаем количество выходных узлов
+    // Get the number of output nodes
     size_t num_output_nodes = 0;
     status = g_ort->SessionGetOutputCount(session, &num_output_nodes);
     if (status != NULL || num_output_nodes == 0) {
@@ -155,7 +155,7 @@ OrtValue* run_inference(OrtSession* session, OrtValue* input_ids_tensor, OrtValu
         return NULL;
     }
 
-    // Получаем имя выходного узла
+    // Get the name of the output node
     status = g_ort->SessionGetOutputName(session, 0, allocator, &output_name);
     if (status != NULL) {
         fprintf(stderr, "Error: Failed to get output name\n");
@@ -164,32 +164,32 @@ OrtValue* run_inference(OrtSession* session, OrtValue* input_ids_tensor, OrtValu
         return NULL;
     }
 
-    // Настраиваем входные параметры
+    // Set up input parameters
     const char* input_names[] = { "input_ids", "attention_mask" };
     const char* output_names[] = { output_name };
     OrtValue* input_tensors[] = { input_ids_tensor, attention_mask_tensor };
 
-    // Запускаем инференс
+    // Run inference
     status = g_ort->Run(
         session,
         run_options,
         input_names,
         (const OrtValue* const*)input_tensors,
-        2,  // количество входных тензоров
+        2,  // number of input tensors
         (const char* const*)output_names,
-        1,  // количество выходных тензоров
+        1,  // number of output tensors
         &output_tensor
     );
 
-    // Освобождаем память выходного имени
+    // Free the memory of the output name
     if (output_name) {
         allocator->Free(allocator, output_name);
     }
 
-    // Освобождаем run options, они больше не нужны
+    // Free up run options, they are no longer needed
     g_ort->ReleaseRunOptions(run_options);
 
-    // Проверяем результат инференса
+    // Check the result of the inference
     if (status != NULL) {
         const char* msg = g_ort->GetErrorMessage(status);
         fprintf(stderr, "Error during inference: %s\n", msg);
@@ -199,68 +199,12 @@ OrtValue* run_inference(OrtSession* session, OrtValue* input_ids_tensor, OrtValu
         }
         return NULL;
     }
-
-    // Возвращаем результат
-    // ВАЖНО: Вызывающая сторона отвечает за освобождение output_tensor
-    // через g_ort->ReleaseValue(output_tensor)
+    
+    // Return the result
+    // IMPORTANT: The caller is responsible for releasing the output_tensor
+    // via g_ort->ReleaseValue(output_tensor)
     return output_tensor;
 }
-
-// OrtValue* run_inference(OrtSession* session, OrtValue* input_ids_tensor, OrtValue* attention_mask_tensor) {
-//     OrtStatus* status = NULL;
-
-//     // Input node names (they must match your model input nodes)
-//     const char* input_names[] = { "input_ids", "attention_mask" };
-//     OrtValue* input_tensors[] = { input_ids_tensor, attention_mask_tensor };
-
-//     // Get the number of output nodes
-//     size_t num_output_nodes = 0;
-//     status = g_ort->SessionGetOutputCount(session, &num_output_nodes);
-//     if (status != NULL || num_output_nodes == 0) {
-//         fprintf(stderr, "Error: Failed to get the number of output nodes.\n");
-//         if (status) g_ort->ReleaseStatus(status);
-//         return NULL;
-//     }
-
-//     // Get the name of the output node
-//     OrtAllocator* allocator = NULL;
-//     g_ort->GetAllocatorWithDefaultOptions(&allocator);
-
-//     char* output_name = NULL;
-//     status = g_ort->SessionGetOutputName(session, 0, allocator, &output_name);
-//     if (status != NULL) {
-//         fprintf(stderr, "Error: Failed to get the exit node name.\n");
-//         if (status) g_ort->ReleaseStatus(status);
-//         return NULL;
-//     }
-
-//     // Run inference
-//     OrtRunOptions* run_options = NULL; 
-//     OrtValue* output_tensor = NULL;
-
-//     status = g_ort->Run(
-//         session,
-//         run_options,
-//         input_names,
-//         (const OrtValue* const*)input_tensors,
-//         2, // Number of input tensors
-//         (const char* const*)&output_name,
-//         1, // Number of output nodes
-//         &output_tensor
-//     );
-
-//     // Free the output node name
-//     allocator->Free(allocator, output_name);
-
-//     if (status != NULL) {
-//         const char* msg = g_ort->GetErrorMessage(status);
-//         fprintf(stderr, "Error while performing inference: %s\n", msg);
-//         g_ort->ReleaseStatus(status);
-//         return NULL;
-//     }
-
-//     return output_tensor;
-// }
 
 /**
  * Creates and initializes an ONNX Runtime session from a model file.
