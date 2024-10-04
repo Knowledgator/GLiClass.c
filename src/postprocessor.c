@@ -87,7 +87,7 @@ void process_output_tensor(OrtValue* output_tensor, const OrtApi* g_ort, bool sa
     int num_classes = dims[1];
     if (strcmp(classification_type, "multi-label") == 0) {    
         for (int i = 0; i < batch_size; i++) {
-            printf("Text: %s:\n", texts[i]);
+            printf("Text_%d: %s:\n",i, texts[i]);
             for (int j = 0; j < num_classes; j++) {
                 float logit = output_data[i * num_classes + j];
                 float prob = sigmoid(logit);  // sigmoid function
@@ -105,9 +105,9 @@ void process_output_tensor(OrtValue* output_tensor, const OrtApi* g_ort, bool sa
                     }
                 
                     if (label) {
-                        printf("  Label: %s, Score: %.6f\n", label, prob);
+                        printf("  Text_%d Label: %s, Score: %.6f\n",i, label, prob);
                     } else {
-                        printf("  Label: [Unknown], Score: %.6f\n", prob);
+                        printf("  Text_%d Label: [Unknown], Score: %.6f\n",i, prob);
                     }
                 }
             }
@@ -115,7 +115,7 @@ void process_output_tensor(OrtValue* output_tensor, const OrtApi* g_ort, bool sa
         }
     } else if (strcmp(classification_type, "single-label") == 0){
         for (int i = 0; i < batch_size; i++) {
-            printf("Text: %s:\n", texts[i]);
+            printf("Text_%d: %s:\n",i, texts[i]);
             float max_prob = 0.0f;
             int max_idx = -1;
             for (int j = 0; j < num_classes; j++) {
@@ -139,9 +139,9 @@ void process_output_tensor(OrtValue* output_tensor, const OrtApi* g_ort, bool sa
             }
             
             if (label) {
-                printf("  Label: %s, Score: %.6f\n", label, max_prob);
+                printf("  Text_%d Label: %s, Score: %.6f\n",i, label, max_prob);
             } else {
-                printf("  Label: [Unknown], Score: %.6f\n", max_prob);
+                printf("  Text_%d Label: [Unknown], Score: %.6f\n",i, max_prob);
             }
             printf("\n");
         }

@@ -7,20 +7,14 @@
 #include "tokenizers_c.h"
 #include "configs.h"
 
-// Function to process data in parallel batches
-int process_batches_parallel(
-    const char** texts,
-    size_t num_texts,
-    char*** labels,
-    size_t* num_labels,
-    size_t num_labels_size,
-    bool same_labels,
-    bool prompt_first,
-    const char* classification_type,
-    TokenizerHandle tokenizer_handler,
-    OrtSession* session,
-    const OrtApi* ort,
-    float threshold
-);
+void parallel_preprocess(OrtValue*** input_ids_tensors, OrtValue*** attention_mask_tensors,
+                         const char** texts, const char*** labels, size_t* num_labels,
+                         size_t num_texts, bool same_labels, bool prompt_first,
+                         TokenizerHandle tokenizer_handler);
+
+void parallel_postprocess(OrtValue** output_tensors, const OrtApi* g_ort,
+                          bool same_labels, const char*** labels, size_t* num_labels,
+                          size_t num_labels_size, float threshold, size_t num_texts,
+                          const char** texts, const char* classification_type);
 
 #endif // PARALLEL_PROCESSOR_H
