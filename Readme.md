@@ -16,6 +16,7 @@ It can be used for topic classification, sentiment analysis and as a reranker in
     <a href="https://huggingface.co/spaces/knowledgator/GLiClass_SandBox">🤗 Space</a>
     <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
     <a href="https://huggingface.co/collections/knowledgator/gliclass-6661838823756265f2ac3848">🤗 GliClass Collection</a>
+    <a href="https://huggingface.co/collections/knowledgator/gliclass-6661838823756265f2ac3848">🤗 GliClass Collection</a>
 </p>
 
 ## 🛠 Build
@@ -126,7 +127,7 @@ After all the necessary configurations, the program can be launched with the fol
         "Why are you running?",
         "Support Ukraine"
     ],
-    "labels": ["format","model","tool","necessity"],
+    "labels": [["format","model","tool","necessity"]],
     "same_labels": true,
     "classification_type": "multi-label"
 }
@@ -142,7 +143,7 @@ or
     "labels": [
         ["format","model","tool","cat"],
         ["question","tool","statement"],
-        ["call to action", "necessity"],
+        ["call to action", "necessity"]
         ],
     "same_labels": false,
     "classification_type": "single-label" 

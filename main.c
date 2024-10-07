@@ -5,8 +5,13 @@
 #include "cJSON.h"
 #include "onnxruntime_c_api.h"
 #include <omp.h>
+#include <mqueue.h>
+#include <pthread.h>
+
 
 // Project includes (folder include)
+#include "preprocessor.h"
+#include "read_data.h"
 #include "postprocessor.h"
 #include "model.h"
 #include "tokenizer.h" 
@@ -14,6 +19,7 @@
 #include "read_data.h"
 #include "paths.h"
 #include "configs.h"
+#include "parallel_processor.h"
 
 // Ini variables for data
 char** texts = NULL;                // Array of strings containing texts to classify
@@ -26,6 +32,14 @@ char* classification_type = NULL;   // Classification type (e.g. single-label, m
 
 const OrtApi* g_ort = NULL;         // Global pointer to ONNX Runtime API for performing model inference
 
+// Mutex declarations
+pthread_mutex_t queue_mutex;
+
+// Buffers for input and output
+OrtValue** input_ids_tensors = NULL;
+OrtValue** attention_mask_tensors = NULL;
+OrtValue** output_tensors = NULL;
+
 /**
  * Main function that runs the text classification model using ONNX Runtime.
  * It reads input data from a JSON file, preprocesses the texts, tokenizes them, runs inference using the ONNX model,
@@ -35,6 +49,7 @@ const OrtApi* g_ort = NULL;         // Global pointer to ONNX Runtime API for pe
  * @param argv An array of command-line arguments. argv[1] should be the path to the input JSON file.
  * @return 0 if successful, or 1 if an error occurs (e.g., invalid arguments or failed initialization).
  */
+
 int main(int argc, char *argv[]) {
     if (argc < 3) {
         printf("Usage: %s /path/to/your_data.json [prompt_first: true/false]\n", argv[0]);
@@ -50,11 +65,6 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     bool prompt_first = string_to_bool(argv[2]);
-
-    // clock_t start, end;
-    // double cpu_time_used;
-    double start_time, end_time, cpu_time_used;
-
     ///////////// Prepare inputs /////////////
     parse_json(json_string, &texts, &num_texts, &labels, &num_labels, &num_labels_size, &same_labels, &classification_type);
     printf("DONE: parse_json;\n");
@@ -62,6 +72,7 @@ int main(int argc, char *argv[]) {
         printf("classification type is not provided\n");
         return 1;
     }
+    free(json_string);
     ///////////// intializing part /////////////
     TokenizerHandle tokenizer_handler = create_tokenizer(TOKENIZER_PATH);
     if (!tokenizer_handler) {
@@ -89,80 +100,92 @@ int main(int argc, char *argv[]) {
     
     /////////////////////////////////////////////////////////
     //////////////////// INFERENCE START ////////////////////
-    // Start a parallel region using OpenMP to enable multi-threading
-    #pragma omp parallel
-    {   
-        // Use dynamic scheduling to distribute batches across threads
-        #pragma omp for schedule(dynamic)
-        for (size_t i = 0; i < num_texts; i += BATCH_SIZE) {
-            // Calculate the size of the current batch; handle cases where the last batch is smaller than BATCH_SIZE
-            size_t current_batch_size = (i + BATCH_SIZE > num_texts) ? (num_texts - i) : BATCH_SIZE;
-            
-            #pragma omp critical
-            {
-                printf("Thread %d processing batch %zu to %zu\n", omp_get_thread_num(), i, i + current_batch_size - 1);
-            }
+    // Initialize queue mutex
+    pthread_mutex_init(&queue_mutex, NULL);
 
-            ///////////// Prepare inputs for batch /////////////
-            // Select the subset of texts and labels for the current batch
-            char** batch_texts = &texts[i];
-            char*** batch_labels = (same_labels) ? labels : &labels[i]; // Choose labels based on whether they are the same for all texts
-            size_t* batch_num_labels = (same_labels) ? num_labels : &num_labels[i];
+    // Allocate memory for tensors
+    size_t num_batches = (num_texts + BATCH_SIZE - 1) / BATCH_SIZE;
+    input_ids_tensors = malloc(sizeof(OrtValue*) * num_batches);
+    attention_mask_tensors = malloc(sizeof(OrtValue*) * num_batches);
+    output_tensors = malloc(sizeof(OrtValue*) * num_batches);
 
-            // Prepare the inputs for the current batch, which includes formatting the text and labels
-            char** prepared_inputs = prepare_inputs(batch_texts, batch_labels, current_batch_size, batch_num_labels, same_labels, prompt_first);
-            
-            ///////////// Tokenize /////////////
-            // Tokenize the inputs using the tokenizer handler, ensuring the tokenized texts fit within MAX_LENGTH
-            TokenizedInputs tokenized = tokenize_inputs(tokenizer_handler, prepared_inputs, current_batch_size, MAX_LENGTH);
+    double start_time, end_time;
+    start_time = omp_get_wtime();
 
-            ///////////// ONNX /////////////
-            OrtValue* input_ids_tensor = NULL;
-            OrtValue* attention_mask_tensor = NULL;    
+    // Parallel preprocessing
+    parallel_preprocess(texts, labels, num_labels, num_texts,
+                       same_labels, prompt_first, tokenizer_handler,
+                       input_ids_tensors, attention_mask_tensors);    
+    // #pragma omp parallel for schedule(dynamic)
+    // for (size_t i = 0; i < num_texts; i += BATCH_SIZE) {
+    //     size_t current_batch_size = (i + BATCH_SIZE > num_texts) ? (num_texts - i) : BATCH_SIZE;
 
-            // Prepare input tensors for the ONNX model; if this fails, log the error and continue to the next batch
-            if (prepare_input_tensors(&tokenized, &input_ids_tensor,  &attention_mask_tensor) != 0) {
-                #pragma omp critical
-                {
-                    fprintf(stderr, "Error: Failed to prepare input tensors for batch %zu to %zu\n", i, i + current_batch_size - 1);
-                }
-                // Free mem and continue with next batch
-                free_prepared_inputs(prepared_inputs, current_batch_size);
-                free_tokenized_inputs(&tokenized);
-                continue;
-            }
+    //     // Prepare input data
+    //     const char** batch_texts = (const char**)&texts[i];
+    //     const char*** batch_labels = (const char***)(same_labels ? (void*)labels : (void*)&labels[i]);
+    //     size_t* batch_num_labels = (same_labels) ? num_labels : &num_labels[i];
 
-            ///////////// Run inference /////////////
-            OrtValue* output_tensor = run_inference(session, input_ids_tensor, attention_mask_tensor);
-            if (output_tensor == NULL) {
-                #pragma omp critical
-                {
-                    fprintf(stderr, "Model inference error for batch %zu to %zu\n", i, i + current_batch_size - 1);
-                }
-                // Free mem and continue with next batch
-                g_ort->ReleaseValue(input_ids_tensor);
-                g_ort->ReleaseValue(attention_mask_tensor);
-                free_prepared_inputs(prepared_inputs, current_batch_size);
-                free_tokenized_inputs(&tokenized);
-                continue;
-            }
+    //     // Prepare tokens
+    //     const char** prepared_inputs = prepare_inputs(batch_texts, batch_labels, current_batch_size, batch_num_labels, same_labels, prompt_first);
+    //     TokenizedInputs tokenized = tokenize_inputs(tokenizer_handler, prepared_inputs, current_batch_size, MAX_LENGTH);
 
-            ///////////// Decoding /////////////
-            // Process the output tensor and decode the classification results for the current batch
-            process_output_tensor(output_tensor, g_ort, same_labels, batch_labels, batch_num_labels, num_labels_size, THRESHOLD,
-                                current_batch_size,batch_texts ,classification_type);
+    //     // Prepare input tensors
+    //     prepare_input_tensors(&tokenized, &input_ids_tensors[i / BATCH_SIZE], &attention_mask_tensors[i / BATCH_SIZE]);
 
-            ///////////// Free batch resources /////////////
-            // Release memory used by the prepared inputs, tokenized data, and tensors for the current batch
-            free_prepared_inputs(prepared_inputs, current_batch_size);
-            free_tokenized_inputs(&tokenized);
-            g_ort->ReleaseValue(input_ids_tensor);
-            g_ort->ReleaseValue(attention_mask_tensor);
-            g_ort->ReleaseValue(output_tensor);
-        }
+    //     // Clean up memory
+    //     free_prepared_inputs((char**)prepared_inputs, current_batch_size);
+    //     free_tokenized_inputs(&tokenized);
+    // }
+
+    // Inference stage - processing batches
+    #pragma omp parallel for schedule(dynamic)
+    for (size_t i = 0; i < num_batches; i++) {
+        #ifdef USE_CUDA // GPU
+        pthread_mutex_lock(&queue_mutex);
+        output_tensors[i] = run_inference(session, input_ids_tensors[i], attention_mask_tensors[i]);
+        pthread_mutex_unlock(&queue_mutex);
+        #else
+        output_tensors[i] = run_inference(session, input_ids_tensors[i], attention_mask_tensors[i]);
+        #endif
     }
-    // Free tokenizer 
-    tokenizers_free(tokenizer_handler);
 
+    // Postprocess stage - processing batches
+    parallel_postprocess(output_tensors, num_batches, num_texts,
+                        texts, labels, num_labels,
+                        same_labels, num_labels_size, classification_type);
+    // #pragma omp parallel for schedule(dynamic)
+    // for (size_t i = 0; i < num_batches; i++) {
+    //     size_t current_batch_size = (i == num_batches - 1) ? (num_texts - i * BATCH_SIZE) : BATCH_SIZE;
+
+    //     const char** batch_texts = (const char**)&texts[i * BATCH_SIZE];
+    //     const char*** batch_labels = (const char***)(same_labels ? (void*)labels : (void*)&labels[i * BATCH_SIZE]);
+    //     size_t* batch_num_labels = (same_labels) ? num_labels : &num_labels[i * BATCH_SIZE];
+
+    //     process_output_tensor(output_tensors[i], g_ort, same_labels, batch_labels, batch_num_labels, num_labels_size, THRESHOLD,
+    //                           current_batch_size, batch_texts, classification_type);
+    //     // Free output tensor after processing
+    //     g_ort->ReleaseValue(output_tensors[i]);
+    // }
+    
+    end_time = omp_get_wtime();
+    printf("Execution time: %f seconds\n", end_time - start_time);
+    // Free resources
+    for (size_t i = 0; i < num_batches; i++) {
+        g_ort->ReleaseValue(input_ids_tensors[i]);
+        g_ort->ReleaseValue(attention_mask_tensors[i]);
+        // g_ort->ReleaseValue(output_tensors[i]);
+    }
+
+    free(input_ids_tensors);
+    free(attention_mask_tensors);
+    free(output_tensors);
+
+    // Free tokenizer
+    tokenizers_free(tokenizer_handler);
+    // Free onnx
+    g_ort->ReleaseSession(session);
+    g_ort->ReleaseEnv(env);
+
+    pthread_mutex_destroy(&queue_mutex);
     return 0;
 }

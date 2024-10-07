@@ -75,23 +75,33 @@ void parse_json(const char* json_string, char*** texts, size_t* num_texts, char*
         *same_labels = cJSON_IsTrue(same_labels_json);
     }
     
-    if (*same_labels){
+    if (*same_labels) {
         // Get array labels
         cJSON* labels_json = cJSON_GetObjectItemCaseSensitive(json, "labels");
         if (cJSON_IsArray(labels_json)) {
             *num_labels_size = cJSON_GetArraySize(labels_json);
-            *labels = (char**)malloc(*num_labels_size * sizeof(char*));
-            for (size_t i = 0; i < *num_labels_size; ++i) {
-                cJSON* label = cJSON_GetArrayItem(labels_json, i);
-                if (cJSON_IsString(label)) {
-                    (*labels)[i] = strdup(label->valuestring);
+            
+            if (*num_labels_size > 0) {
+                cJSON* first_labels_group = cJSON_GetArrayItem(labels_json, 0);
+                if (cJSON_IsArray(first_labels_group)) {
+                    *num_labels_size = cJSON_GetArraySize(first_labels_group);
+                    *labels = (char***)malloc(sizeof(char**));  // One set of labels for all texts
+                    (*labels)[0] = (char**)malloc(*num_labels_size * sizeof(char*));
+                    
+                    for (size_t i = 0; i < *num_labels_size; ++i) {
+                        cJSON* label = cJSON_GetArrayItem(first_labels_group, i);
+                        if (cJSON_IsString(label)) {
+                            (*labels)[0][i] = strdup(label->valuestring);
+                        }
+                    }
+
+                    // Set the same number of labels for each text
+                    *num_labels = (size_t*)malloc(*num_texts * sizeof(size_t));
+                    for (size_t i = 0; i < *num_texts; ++i) {
+                        (*num_labels)[i] = *num_labels_size;
+                    }
                 }
             }
-        }
-        // Dynamically create an array num_labels corresponding to the number of texts
-        *num_labels = (size_t*)malloc(*num_texts * sizeof(size_t));
-        for (size_t i = 0; i < *num_texts; ++i) {
-            (*num_labels)[i] = *num_labels_size;  // Number of labels for each text
         }
     } else {
         // We get an array of labels for each text (array of arrays)

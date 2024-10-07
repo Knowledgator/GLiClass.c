@@ -29,9 +29,9 @@ float sigmoid(float x) {
  * @param texts A dynamic array containing the input texts.
  * @param classification_type A string specifying the type of classification ("multi-label" or "single-label").
  */
-void process_output_tensor(OrtValue* output_tensor, const OrtApi* g_ort, bool same_labels, char*** labels,
-                            size_t* num_labels, size_t num_labels_size, float threshold, size_t num_texts, char** texts,
-                            char* classification_type) {
+void process_output_tensor(OrtValue* output_tensor, const OrtApi* g_ort, bool same_labels, const char** const* labels,
+                            const size_t* num_labels, size_t num_labels_size, float threshold, size_t num_texts, const char** texts,
+                            const char* classification_type) {
     OrtStatus* status = NULL;
 
     // Get information about the type and shape of the tensor
@@ -87,7 +87,7 @@ void process_output_tensor(OrtValue* output_tensor, const OrtApi* g_ort, bool sa
     int num_classes = dims[1];
     if (strcmp(classification_type, "multi-label") == 0) {    
         for (int i = 0; i < batch_size; i++) {
-            printf("Text: %s:\n", texts[i]);
+            printf("Text_%d: %s:\n",i, texts[i]);
             for (int j = 0; j < num_classes; j++) {
                 float logit = output_data[i * num_classes + j];
                 float prob = sigmoid(logit);  // sigmoid function
@@ -96,7 +96,7 @@ void process_output_tensor(OrtValue* output_tensor, const OrtApi* g_ort, bool sa
                     const char* label = NULL;
                     if (same_labels) {
                         if (j < num_labels_size) {
-                            label = labels[j];
+                            label = labels[0][j];
                         }
                     } else {
                         if (i < num_texts   && j < num_labels[i]) {
@@ -105,9 +105,9 @@ void process_output_tensor(OrtValue* output_tensor, const OrtApi* g_ort, bool sa
                     }
                 
                     if (label) {
-                        printf("  Label: %s, Score: %.6f\n", label, prob);
+                        printf("  Text_%d Label: %s, Score: %.6f\n",i, label, prob);
                     } else {
-                        printf("  Label: [Unknown], Score: %.6f\n", prob);
+                        printf("  Text_%d Label: [Unknown], Score: %.6f\n",i, prob);
                     }
                 }
             }
@@ -115,7 +115,7 @@ void process_output_tensor(OrtValue* output_tensor, const OrtApi* g_ort, bool sa
         }
     } else if (strcmp(classification_type, "single-label") == 0){
         for (int i = 0; i < batch_size; i++) {
-            printf("Text: %s:\n", texts[i]);
+            printf("Text_%d: %s:\n",i, texts[i]);
             float max_prob = 0.0f;
             int max_idx = -1;
             for (int j = 0; j < num_classes; j++) {
@@ -130,7 +130,7 @@ void process_output_tensor(OrtValue* output_tensor, const OrtApi* g_ort, bool sa
             const char* label = NULL;
             if (same_labels) {
                 if (max_idx < num_labels_size) {
-                    label = labels[max_idx];
+                    label = labels[0][max_idx];
                 }
             } else {
                 if (i < num_texts && max_idx < num_labels[i]) {
@@ -139,9 +139,9 @@ void process_output_tensor(OrtValue* output_tensor, const OrtApi* g_ort, bool sa
             }
             
             if (label) {
-                printf("  Label: %s, Score: %.6f\n", label, max_prob);
+                printf("  Text_%d Label: %s, Score: %.6f\n",i, label, max_prob);
             } else {
-                printf("  Label: [Unknown], Score: %.6f\n", max_prob);
+                printf("  Text_%d Label: [Unknown], Score: %.6f\n",i, max_prob);
             }
             printf("\n");
         }
@@ -150,6 +150,7 @@ void process_output_tensor(OrtValue* output_tensor, const OrtApi* g_ort, bool sa
     }
 
 
-    free(dims);
-    g_ort->ReleaseTensorTypeAndShapeInfo(type_info);
+    if (dims) free(dims);
+    if (type_info) g_ort->ReleaseTensorTypeAndShapeInfo(type_info);
+    if (status) g_ort->ReleaseStatus(status);
 }

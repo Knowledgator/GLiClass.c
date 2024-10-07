@@ -13,3 +13,7 @@ onnxruntime-linux-x64-gpu-1.19.2.tgz
 -onnxruntime-linux-x64-gpu-1.19.2
 _onnxruntime-linux-x64-gpu-1.19.2
 time_test.py
+mesure.py
+test.py
+test.c
+main1t.c
