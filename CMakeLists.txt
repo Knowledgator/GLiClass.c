@@ -130,7 +130,7 @@ add_executable(GLiClass
                 src/tokenizer.c
                 src/preprocessor.c
                 src/read_data.c
-                test.c)
+                main.c)
 
 # Include directories with tokenizers-cpp header files
 target_include_directories(GLiClass PRIVATE ${TOKENIZER_CPP_PATH}/include ${CJSON_PATH} ${ONNXRUNTIME_PATH}/include)

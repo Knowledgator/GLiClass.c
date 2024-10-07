@@ -15,7 +15,7 @@ It can be used for topic classification, sentiment analysis and as a reranker in
     <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
     <a href="https://huggingface.co/spaces/knowledgator/GLiClass_SandBox">🤗 Space</a>
     <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
-    <a href="https://huggingface.co/models?library=gliner&sort=trending">🤗 GliClass Collection</a>
+    <a href="https://huggingface.co/collections/knowledgator/gliclass-6661838823756265f2ac3848">🤗 GliClass Collection</a>
 </p>
 
 ## 🛠 Build
@@ -31,10 +31,10 @@ cd GLiClass.c
 git submodule update --init --recursive
 ```
 
-### <img src="https://github.com/user-attachments/assets/4d2fd37f-9882-4fea-902b-be5ccc1edae2" alt="image" height="30" width="30"> CPU build dependencies & instructions
+**📦 CPU build dependencies & instructions**
  - CMake (>= 3.25)
  - [Rust](https://www.rust-lang.org/tools/install)
- - [ONNXRuntime](https://github.com/microsoft/onnxruntime/releases) CPU version for yor system
+ - [ONNXRuntime](https://github.com/microsoft/onnxruntime/releases) CPU version for your system
  - OpenMP 
 
 To build the project for CPU, use the standard version of ONNXRuntime without GPU support. Make sure you download and unzip ```onnxruntime-linux-x64-1.19.2``` into the same directory as the GliClass code.  
@@ -43,14 +43,14 @@ For `tar.gz` files you can use the following command:
 ```bash
 tar -xvzf onnxruntime-linux-x64-1.19.2.tgz 
 ```
-Then create build directory and compile the project:  
+Then create a build directory and compile the project:  
 ```bash
 mkdir -p build
 cd build
 cmake  -DBUILD_TARGET=CPU ..
 make -j8
 ```
-### <img src="https://github.com/user-attachments/assets/92a49538-feb0-4fcb-8789-8d6edfc2ceed" alt="image" height="40" width="40"> GPU build dependencies & instruction
+**📦GPU build dependencies & instruction**
  - CMake (>= 3.25)
  - [Rust](https://www.rust-lang.org/tools/install)
  - [ONNXRuntime](https://github.com/microsoft/onnxruntime/releases) GPU version for yor system
@@ -65,7 +65,7 @@ For `tar.gz` files you can use the following command:
 ```bash
 tar -xvzf onnxruntime-linux-x64-gpu-1.19.2.tgz 
 ```
-Then create build directory and compile the project:  
+Then create a build directory and compile the project:  
 ```bash
 mkdir -p build
 cd build
@@ -84,18 +84,18 @@ Running via run_GLiClass.sh requires the additional **jq** module
 sudo apt-get update
 sudo apt-get install jq
 ```
-This script will download all configurations for model from [Knowledgator GLiClass collection](https://huggingface.co/collections/knowledgator/gliclass-6661838823756265f2ac3848). You only need to specify the model name and the path to the data that needs to be classified e.g.
+This script will download all configurations for the model from [Knowledgator GLiClass collection](https://huggingface.co/collections/knowledgator/gliclass-6661838823756265f2ac3848). You only need to specify the model name and the path to the data that needs to be classified e.g.
 ```
 ./run_GLiClass.sh knowledgator/gliclass-base-v1.0 /path/to/your_data.json
 ```
-**Note** some models can not be loaded with this script, manual configuration is required to run them.  
+**Note** Some models can not be loaded with this script, manual configuration is required to run them.  
 The list of such models is given below  
  - knowledgator/gliclass-qwen-1.5B-v1.0
  - knowledgator/gliclass-llama-1.3B-v1.0
 
 ### Manual setup
 To start manual configuration you need to download the ONNX version of the model from [Knowledgator GLiClass collection](https://huggingface.co/collections/knowledgator/gliclass-6661838823756265f2ac3848) and place it in a directory convenient for you. By default, the program searches in the ```onnx``` directory, but the directory can be changed in the ```include/paths.h``` file.  
-Next you need to download the tokenizer configuration file ```tokenizer.json```. By default, the program searches in the ```tokenizer``` directory, but the directory can be changed in the ```include/paths.h``` file as well. 
+Next, you need to download the tokenizer configuration file ```tokenizer.json```. By default, the program searches in the ```tokenizer``` directory, but the directory can be changed in the ```include/paths.h``` file as well. 
 
 ``` C
 // include/paths.h
@@ -118,7 +118,7 @@ After all the necessary configurations, the program can be launched with the fol
 ```
 **Note** the value for ```prompt_first``` parameter can be found in the ```config.json``` [configuration file for the onnx version](https://huggingface.co/knowledgator/gliclass-small-v1.0/blob/be5ffb291f2fa96fed865390ceee092efebf4b13/onnx/config.json#L4).
 
-**Important** Data in your json file must be in folowing format
+**Important** Data in your JSON file must be in the following format:
 ```json
 {
     "texts": [
@@ -126,7 +126,7 @@ After all the necessary configurations, the program can be launched with the fol
         "Why are you running?",
         "Support Ukraine"
     ],
-    "labels": ["format","model","tool","necessity"],
+    "labels": [["format","model","tool","necessity"]],
     "same_labels": true,
     "classification_type": "multi-label"
 }
@@ -142,14 +142,28 @@ or
     "labels": [
         ["format","model","tool","cat"],
         ["question","tool","statement"],
-        ["call to action", "necessity"],
-        ]
+        ["call to action", "necessity"]
+        ],
     "same_labels": false,
     "classification_type": "single-label" 
 }
 ```
+## Docker 
+Also, some GLiClass models already have their own dockerized version, you can find them on our [official dockerhub](https://hub.docker.com/repositories/knowledgator)
+  
+The general principle of using dockerized models
+1. Pull the image:
+    ```bash
+    docker pull knowledgator/gliclass-specific-version
+    ```
+2. Run the container:
+    ```bash
+    docker run -v /path/to/folder_with_data:/app/data knowledgator/gliclass-specific-version /app/your_data.json
+    ```  
+More detailed instructions are available in the Docker Hub repositories.
+
 ## Convert your model
-If the GLiClass model you need does not yet have an onnx version, you can create it yourself using our script.
+If the GLiClass model you need does not yet have an ONNX version, you can create it yourself using our script.
 ```
 python ONNX/convert_to_onnx.py \
         --model_path "knowledgator/gliclass-base-v1.0" \
