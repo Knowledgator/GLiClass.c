@@ -126,7 +126,7 @@ After all the necessary configurations, the program can be launched with the fol
         "Why are you running?",
         "Support Ukraine"
     ],
-    "labels": ["format","model","tool","necessity"],
+    "labels": [["format","model","tool","necessity"]],
     "same_labels": true,
     "classification_type": "multi-label"
 }
@@ -142,7 +142,7 @@ or
     "labels": [
         ["format","model","tool","cat"],
         ["question","tool","statement"],
-        ["call to action", "necessity"],
+        ["call to action", "necessity"]
         ],
     "same_labels": false,
     "classification_type": "single-label" 
