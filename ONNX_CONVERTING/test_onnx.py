@@ -1,7 +1,6 @@
 import onnxruntime, argparse, json
 import torch, os
 import numpy as np
-import time
 from transformers import AutoTokenizer
 from gliclass import GLiClassModel, ZeroShotClassificationPipeline
 from typing import Tuple, List
@@ -28,11 +27,14 @@ def run_inference_and_compare(ort_session, onnx_inputs, original_logits) -> bool
     onnx_tensor = torch.tensor(onnx_outputs[0])
     print(f"ONNX Outputs: {onnx_tensor}")
 
+    comparison_result = torch.allclose(original_logits, onnx_tensor, atol=1e-3)
+    return comparison_result
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--onnx_path', type=str, default='onnx/')
-    parser.add_argument('--test_quantized', type=bool, default=False)
+    parser.add_argument('--onnx_path', type=str, default = 'onnx/')
+    parser.add_argument('--test_quantized', type=bool, default = False)
 
     args = parser.parse_args()
 
@@ -48,6 +50,7 @@ if __name__ == "__main__":
     else:
         onnx_model = next((file for file in files if "model.onnx" in file), None)
 
+
     # Step 1: Loading the ONNX Model
     onnx_model_path = args.onnx_path + onnx_model
     ort_session = onnxruntime.InferenceSession(onnx_model_path)
@@ -58,21 +61,14 @@ if __name__ == "__main__":
     pipeline = ZeroShotClassificationPipeline(gliclass_model, tokenizer, classification_type="multi-label", device="cpu")
     print(f"Model {original_model_name} loaded")
 
-    with open("./data/reuters-21578-500.json") as file:
-        data = json.load(file)
-
-    text =  data["texts"]
-    labels = data ["labels"]
+    text = "ONNX is an open-source format designed to enable the interoperability of AI models across various frameworks and tools."
+    labels = ['format', 'model', 'tool', 'cat']
 
     # Step 3: Preparing Input Data for ONNX Model and testing
-    # Start measuring inference time
-    start_time = time.time()
     onnx_inputs = prepare_onnx_inputs(pipeline, text, labels)
     print("Data prepared")
 
     # Step 4: Run Inference and compare logits
     comparison_result = run_inference_and_compare(ort_session, onnx_inputs, original_logits)
-    # End measuring inference time
-    end_time = time.time()
-    elapsed_time = end_time - start_time
-    print(f"Inference time: {elapsed_time:.6f} seconds")
+    print(f"Comparison result: {comparison_result}")
+    assert comparison_result, "The comparison failed. Logits are different"
