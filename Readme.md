@@ -43,6 +43,13 @@ For `tar.gz` files you can use the following command:
 ```bash
 tar -xvzf onnxruntime-linux-x64-1.19.2.tgz 
 ```
+
+You can install CPU dependencies using   
+```bash
+./scripts/install_cpu.sh
+```
+**Note** This script will use ```onnxruntime-linux-x64-1.19.2``` as the ONNX runtime library for CPU builds.
+
 Then create a build directory and compile the project:  
 ```bash
 mkdir -p build
@@ -86,7 +93,7 @@ sudo apt-get install jq
 ```
 This script will download all configurations for the model from [Knowledgator GLiClass collection](https://huggingface.co/collections/knowledgator/gliclass-6661838823756265f2ac3848). You only need to specify the model name and the path to the data that needs to be classified e.g.
 ```
-./run_GLiClass.sh knowledgator/gliclass-base-v1.0 /path/to/your_data.json
+./scripts/run_GLiClass.sh knowledgator/gliclass-base-v1.0 /path/to/your_data.json
 ```
 **Note** Some models can not be loaded with this script, manual configuration is required to run them.  
 The list of such models is given below  
