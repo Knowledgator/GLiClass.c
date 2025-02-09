@@ -5,6 +5,7 @@
 #include <stdbool.h>
 
 #include "preprocessor.h"
+#include "utils.h"
 
 /**
  * Prepares inputs for further processing by combining texts with their corresponding labels.
@@ -27,7 +28,7 @@ const char** prepare_inputs(const char* texts[], const char** const* labels, siz
     char** inputs = (char**)malloc(num_texts * sizeof(char*));
     
     if (!inputs) {
-        fprintf(stderr, "Error: cant allocate memory for array inputs\n");
+        print_error("cant allocate memory for array inputs");
         return NULL;
     }    
     for (size_t i = 0; i < num_texts; ++i) {
@@ -38,8 +39,8 @@ const char** prepare_inputs(const char* texts[], const char** const* labels, siz
         }
 
         if (!inputs[i]) {
-            fprintf(stderr, "Error while preparing text for text: %zu\n", i);
-            // Освобождение уже выделенной памяти
+            print_error("while preparing text for text: %zu\n", i);
+
             for (size_t j = 0; j < i; ++j) {
                 free(inputs[j]);
             }
@@ -76,7 +77,7 @@ char* prepare_input(const char* text, const char* labels[], size_t num_labels, b
 
     char* result = (char*)malloc(total_len * sizeof(char));
     if (!result) {
-        fprintf(stderr, "Cant allocate memmory for result prepared string\n");
+        print_error("Failed to allocate memmory for result prepared string\n");
         return NULL;
     }
 
@@ -98,7 +99,7 @@ char* prepare_input(const char* text, const char* labels[], size_t num_labels, b
         for (size_t i = 0; i < num_labels; ++i) {
             strcat(result, label_prefix);
 
-            // Добавление label в нижнем регистре
+            // add label in lower case
             for (const char* p = labels[i]; *p; ++p) {
                 char lower_char = tolower((unsigned char)*p);
                 strncat(result, &lower_char, 1);
