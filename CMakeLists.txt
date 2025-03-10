@@ -122,18 +122,34 @@ add_subdirectory(${CJSON_PATH} cJSON EXCLUDE_FROM_ALL)
 # Find OpenMP package
 find_package(OpenMP REQUIRED)
 
-# Add the executable (your main C file)
-add_executable(GLiClass
-                src/parallel_processor.c
-                src/postprocessor.c
-                src/model.c
-                src/tokenizer.c
-                src/preprocessor.c
-                src/read_data.c
-                main.c)
+# Add shared library
+add_library(GLiClass SHARED
+              gliclass_api.c
+              src/parallel_processor.c
+              src/postprocessor.c
+              src/model.c
+              src/tokenizer.c
+              src/preprocessor.c
+              src/read_data.c)
+
+# Definitions for DLL export
+target_compile_definitions(GLiClass PRIVATE GLICLASS_EXPORTS)
+
+# Public headers (for installation)
+set_target_properties(GLiClass PROPERTIES
+  PUBLIC_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/gliclass_api.h")
 
 # Include directories with tokenizers-cpp header files
-target_include_directories(GLiClass PRIVATE ${TOKENIZER_CPP_PATH}/include ${CJSON_PATH} ${ONNXRUNTIME_PATH}/include)
+target_include_directories(GLiClass PUBLIC
+              ${CMAKE_CURRENT_SOURCE_DIR}/include
+              ${CMAKE_CURRENT_SOURCE_DIR}
+              ${TOKENIZER_CPP_PATH}/include 
+              ${ONNXRUNTIME_PATH}/include
+              ${CJSON_PATH})
 
 # Link tokenizers-cpp libraries
-target_link_libraries(GLiClass tokenizers_cpp cjson ${ONNXRUNTIME_LIB} OpenMP::OpenMP_C)
+target_link_libraries(GLiClass 
+              tokenizers_cpp 
+              cjson 
+              ${ONNXRUNTIME_LIB} 
+              OpenMP::OpenMP_C)
