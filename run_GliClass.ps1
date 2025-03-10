@@ -83,12 +83,12 @@ if (-not (Test-Path $MODEL_CONFIG_FILE)) {
 
 # Validate prompt_first field in model config
 $PROMPT_FIRST = (Get-Content $MODEL_CONFIG_FILE | ConvertFrom-Json).prompt_first
-Write-Output $PROMPT_FIRST
-if ($PROMPT_FIRST -ne $true -and $PROMPT_FIRST -ne $false) {
+if (-not ($PROMPT_FIRST -is [bool])) {
     Write-Host "Something wrong with model configuration file."
     Write-Host "Expected values: 'true' or 'false' but received: $PROMPT_FIRST"
     exit 1
 }
+$PROMPT_FIRST = if ($PROMPT_FIRST) { 'true' } else { 'false' }
 
 # Run the inference command
-Start-Process -FilePath ".\build\Release\GLiClass.exe" -ArgumentList $JSON_FILE_PATH, $PROMPT_FIRST
+.\build\Release\GLiClass.exe $JSON_FILE_PATH, $PROMPT_FIRST
