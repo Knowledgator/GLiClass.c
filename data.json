@@ -1,0 +1,10 @@
+{
+    "texts": [
+        "ONNX is an open-source format designed to enable the interoperability of AI models.",
+        "Why are you running?",
+        "Support Ukraine"
+    ],
+    "labels": [["format","model","tool","necessity"]],
+    "same_labels": true,
+    "classification_type": "multi-label"
+}

@@ -5,8 +5,18 @@
 #include "cJSON.h"
 #include "onnxruntime_c_api.h"
 #include <omp.h>
-#include <mqueue.h>
-#include <pthread.h>
+
+#ifndef _WIN32
+    #include <mqueue.h>
+    #include <pthread.h>
+    #include <unistd.h>
+#else
+    #include <windows.h>
+    #include <io.h>
+
+    #define access _access
+    #define F_OK 0
+#endif // _WIN32
 
 
 // Project includes (folder include)
@@ -33,7 +43,12 @@ char* classification_type = NULL;   // Classification type (e.g. single-label, m
 const OrtApi* g_ort = NULL;         // Global pointer to ONNX Runtime API for performing model inference
 
 // Mutex declarations
+#ifndef _WIN32
 pthread_mutex_t queue_mutex;
+#else
+HANDLE queue_mutex;
+#endif
+
 
 // Buffers for input and output
 OrtValue** input_ids_tensors = NULL;
@@ -74,6 +89,17 @@ int main(int argc, char *argv[]) {
     }
     free(json_string);
     ///////////// intializing part /////////////
+
+    // Check if the tokenizer file exists
+    if (access(TOKENIZER_PATH, F_OK) != 0) {
+        fprintf(stderr, "Error: Tokenizer file not found at path: %s\n", TOKENIZER_PATH);
+        return -1;
+    }
+    else
+    {
+        fprintf(stdout, "Tokenizer file found at path: %s\n", TOKENIZER_PATH);
+    }
+
     TokenizerHandle tokenizer_handler = create_tokenizer(TOKENIZER_PATH);
     if (!tokenizer_handler) {
         return 1; // This error is created in create_tokenizer
@@ -90,6 +116,18 @@ int main(int argc, char *argv[]) {
     }
     printf("DONE: initialize_ort_environment;\n");
 
+
+    // Check if the model file exists
+    if (access(MODEL_PATH, F_OK) != 0) {
+        fprintf(stderr, "Error: Model file not found at path: %s\n", MODEL_PATH);
+        g_ort->ReleaseEnv(env);
+        return -1;
+    }
+    else
+    {
+        fprintf(stdout, "Model file found at path: %s\n", MODEL_PATH);
+    }
+
     OrtSession* session = create_ort_session(env, MODEL_PATH, NUM_THREADS);
     if (session == NULL) {
         fprintf(stderr, "Error: Failed to create session ONNX Runtime.\n");
@@ -101,7 +139,11 @@ int main(int argc, char *argv[]) {
     /////////////////////////////////////////////////////////
     //////////////////// INFERENCE START ////////////////////
     // Initialize queue mutex
+    #ifndef _WIN32
     pthread_mutex_init(&queue_mutex, NULL);
+    #else
+    queue_mutex = CreateMutex(NULL, FALSE, NULL);
+    #endif
 
     // Allocate memory for tensors
     size_t num_batches = (num_texts + BATCH_SIZE - 1) / BATCH_SIZE;
@@ -186,6 +228,11 @@ int main(int argc, char *argv[]) {
     g_ort->ReleaseSession(session);
     g_ort->ReleaseEnv(env);
 
-    pthread_mutex_destroy(&queue_mutex);
+    #ifndef _WIN32
+	pthread_mutex_destroy(&queue_mutex);
+    #else
+	CloseHandle(queue_mutex);
+    #endif
+
     return 0;
 }

@@ -21,7 +21,7 @@ message(STATUS "Build target set to: ${BUILD_TARGET}")
 # Path to ONNXRuntime GPU
 set(ONNXRUNTIME_GPU_PATH "./onnxruntime-linux-x64-gpu-1.19.2")
 # Path to ONNXRuntime CPU
-set(ONNXRUNTIME_CPU_PATH "./onnxruntime-linux-x64-1.19.2")
+set(ONNXRUNTIME_CPU_PATH "./onnxruntime-win-x64-1.19.2")
 
 if(BUILD_TARGET STREQUAL "GPU")
   # Perform checks for GPU, NVIDIA and cuDNN availability

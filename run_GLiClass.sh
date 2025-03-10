@@ -89,4 +89,4 @@ if [ "$PROMPT_FIRST" != "true" ] && [ "$PROMPT_FIRST" != "false" ]; then
 fi
 
 # run
-./build/GLiClass $2 $PROMPT_FIRST
+./build/Release/GLiClass $2 $PROMPT_FIRST
