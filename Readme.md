@@ -43,13 +43,21 @@ For `tar.gz` files you can use the following command:
 ```bash
 tar -xvzf onnxruntime-linux-x64-1.19.2.tgz 
 ```
-Then create a build directory and compile the project:  
+Then create a build directory and compile the project:
+
+* Linux build
 ```bash
-mkdir -p build
-cd build
-cmake  -DBUILD_TARGET=CPU ..
-make -j8
+cmake -DBUILD_TARGET=CPU -DONNXRUNTIME_PATH="./onnxruntime-linux-x64-1.19.2" -S . -B build
+cmake --build build -j
 ```
+
+* Windows build:
+
+```bash
+cmake -DBUILD_TARGET=CPU -DONNXRUNTIME_PATH="./onnxruntime-win-x64-1.19.2" -S . -B build
+cmake --build build -j --config Release
+```
+
 **📦GPU build dependencies & instruction**
  - CMake (>= 3.25)
  - [Rust](https://www.rust-lang.org/tools/install)
@@ -65,17 +73,27 @@ For `tar.gz` files you can use the following command:
 ```bash
 tar -xvzf onnxruntime-linux-x64-gpu-1.19.2.tgz 
 ```
-Then create a build directory and compile the project:  
+Then create a build directory and compile the project:
+
+* Linux build
 ```bash
-mkdir -p build
-cd build
-cmake  -DBUILD_TARGET=GPU ..
-make -j8
+cmake -DBUILD_TARGET=GPU -DONNXRUNTIME_PATH="./onnxruntime-linux-x64-gpu-1.19.2" -S . -B build
+cmake --build build -j
 ```
 
+* Windows build:
+
+```bash
+cmake -DBUILD_TARGET=GPU -DONNXRUNTIME_PATH="./onnxruntime-win-gpu-x64-1.19.2" -S . -B build
+cmake --build build -j --config Release
+```
+
+**NOTICE:** Some issues may occur related to overriding the ONNX Runtime library. To fix this, you can copy the .dll files from the ONNX Runtime lib\ directory to the build directory. An example is provided in the **build.ps1** file.
+
 ## 🚀 Run 
-There are 2 options for launching:
- - ```run_GLiClass.sh``` (automatically configures many dependencies)
+There are 3 options for launching:
+ - ```run_GLiClass.sh``` (automatically configures many dependencies for Linux users)
+ - ```run_GLiClass.ps1``` (automatically configures many dependencies for Windows users)
  - Manual setup 
 
 ### run_GLiClass.sh
@@ -86,8 +104,15 @@ sudo apt-get install jq
 ```
 This script will download all configurations for the model from [Knowledgator GLiClass collection](https://huggingface.co/collections/knowledgator/gliclass-6661838823756265f2ac3848). You only need to specify the model name and the path to the data that needs to be classified e.g.
 ```
-./run_GLiClass.sh knowledgator/gliclass-base-v1.0 /path/to/your_data.json
+./run_GLiClass.sh knowledgator/gliclass-base-v1.0 ./examples/data.json
 ```
+
+### run_GLiClass.ps1
+This script will download all configurations for the model from [Knowledgator GLiClass collection](https://huggingface.co/collections/knowledgator/gliclass-6661838823756265f2ac3848). You only need to specify the model name and the path to the data that needs to be classified e.g.
+```
+.\run_GLiClass.ps1 knowledgator/gliclass-base-v1.0 ./examples/data.json
+```
+
 **Note** Some models can not be loaded with this script, manual configuration is required to run them.  
 The list of such models is given below  
  - knowledgator/gliclass-qwen-1.5B-v1.0

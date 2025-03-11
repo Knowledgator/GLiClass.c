@@ -1,11 +1,15 @@
 cmake_minimum_required(VERSION 3.18)
 project(GLiClass C CXX)
 
+set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}")
+set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}")
+
 # Set C standard
-set(CMAKE_C_STANDARD 11)
-set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+if (MSVC)
+else()
+  set(CMAKE_C_STANDARD 11)
+  set(CMAKE_C_STANDARD_REQUIRED ON)
+endif()
 
 # Include the headers
 include_directories(include)
@@ -18,10 +22,8 @@ message(STATUS "Build target set to: ${BUILD_TARGET}")
 
 ############################################ ONNX ###########################################
 
-# Path to ONNXRuntime GPU
-set(ONNXRUNTIME_GPU_PATH "./onnxruntime-linux-x64-gpu-1.19.2")
-# Path to ONNXRuntime CPU
-set(ONNXRUNTIME_CPU_PATH "./onnxruntime-win-x64-1.19.2")
+# Path to ONNXRuntime 
+set(ONNXRUNTIME_PATH "./onnxruntime-linux-x64-1.19.2" CACHE STRING "Onnxruntime path")
 
 if(BUILD_TARGET STREQUAL "GPU")
   # Perform checks for GPU, NVIDIA and cuDNN availability
@@ -66,12 +68,11 @@ if(BUILD_TARGET STREQUAL "GPU")
   # If all checks are passed, we try to use the GPU version of ONNXRuntime
   find_library(ONNXRUNTIME_LIB
     NAMES onnxruntime libonnxruntime
-    PATHS "${ONNXRUNTIME_GPU_PATH}/lib"
+    PATHS "${ONNXRUNTIME_PATH}/lib"
     NO_DEFAULT_PATH
   )
 
   if(ONNXRUNTIME_LIB)
-    set(ONNXRUNTIME_PATH ${ONNXRUNTIME_GPU_PATH})
     message(STATUS "Using GPU version of ONNXRuntime")
     add_definitions(-DUSE_CUDA)
   else()
@@ -85,7 +86,7 @@ if(BUILD_TARGET STREQUAL "CPU")
   message(STATUS "Using CPU version of ONNXRuntime.")
   find_library(ONNXRUNTIME_LIB
     NAMES onnxruntime libonnxruntime
-    PATHS "${ONNXRUNTIME_CPU_PATH}/lib"
+    PATHS "${ONNXRUNTIME_PATH}/lib"
     NO_DEFAULT_PATH
   )
 
@@ -93,7 +94,6 @@ if(BUILD_TARGET STREQUAL "CPU")
     message(FATAL_ERROR "CPU version of ONNXRuntime library not found. Please check the library paths or download them from official site:\n
                           https://github.com/microsoft/onnxruntime/releases.")
   else()
-    set(ONNXRUNTIME_PATH ${ONNXRUNTIME_CPU_PATH})
     message(STATUS "Using CPU version of ONNXRuntime")
   endif()
 endif()
