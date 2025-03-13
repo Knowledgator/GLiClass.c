@@ -6,15 +6,8 @@ if [ -z "$1" ]; then
     exit 1
 fi
 
-# Check if the second argument (path to .json file) is provided
-if [ -z "$2" ]; then
-    echo "You need to specify a path to the .json file e.g: ./run_GLiClass.sh knowledgator/gliclass-base-v1.0 /path/to/your_data.json"
-    exit 1
-fi
-
 # Assign arguments to variables
 MODEL_NAME=$1
-JSON_FILE_PATH=$2
 
 MODEL_NAME="$1"
 
@@ -79,14 +72,5 @@ else
         done        
 
     fi
-    echo "Everithing was set up. Running inference"
+    echo "Everithing was set up. Ready to run examples!"
 fi
-PROMPT_FIRST=$(jq -r '.prompt_first' "$MODEL_CONFIG_FILE")
-if [ "$PROMPT_FIRST" != "true" ] && [ "$PROMPT_FIRST" != "false" ]; then
-    echo "Something wrong with model configuration file."
-    echo "Expected values: 'true' or 'false' but recived: "$PROMPT_FIRST
-    exit 1
-fi
-
-# run
-./build/GLiClass $2 $PROMPT_FIRST

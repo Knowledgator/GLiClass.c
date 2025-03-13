@@ -4,15 +4,8 @@ if ($args.Length -lt 1) {
     exit 1
 }
 
-# Check if the second argument (path to .json file) is provided
-if ($args.Length -lt 2) {
-    Write-Host "You need to specify a path to the .json file e.g: .\run_GLiClass.ps1 knowledgator/gliclass-base-v1.0 C:\path\to\your_data.json"
-    exit 1
-}
-
 # Assign arguments to variables
 $MODEL_NAME = $args[0]
-$JSON_FILE_PATH = $args[1]
 
 # Dirs
 $TOKENIZER_DIR = "tokenizer"
@@ -78,17 +71,5 @@ if (-not (Test-Path $MODEL_CONFIG_FILE)) {
             }
         }
     }
-    Write-Host "Everything was set up. Running inference"
+    Write-Host "Everything was set up. Ready to run examples!"
 }
-
-# Validate prompt_first field in model config
-$PROMPT_FIRST = (Get-Content $MODEL_CONFIG_FILE | ConvertFrom-Json).prompt_first
-if (-not ($PROMPT_FIRST -is [bool])) {
-    Write-Host "Something wrong with model configuration file."
-    Write-Host "Expected values: 'true' or 'false' but received: $PROMPT_FIRST"
-    exit 1
-}
-$PROMPT_FIRST = if ($PROMPT_FIRST) { 'true' } else { 'false' }
-
-# Run the inference command
-.\build\Release\GLiClass.exe $JSON_FILE_PATH, $PROMPT_FIRST
