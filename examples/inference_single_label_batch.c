@@ -33,7 +33,7 @@ int main() {
 
     // gliclass_infer(session);
     
-    GLiClassResult*** results = NULL;
+    GLiClassResult** results = NULL;
     size_t* results_shape = NULL;
     size_t results_shape_size = 0;
     
@@ -57,8 +57,10 @@ int main() {
     for (size_t i = 0; i < results_shape_size; i++) {
         fprintf(stdout, "\nText_%ld/%ld: %s\n", i, results_shape_size, texts[i]);
         for (size_t j = 0; j < results_shape[i]; j++) {
-            fprintf(stdout, "Label_%ld: %s, score: %f\n", j, results[i][j]->label, results[i][j]->score);
+            fprintf(stdout, "Label_%ld: %s, score: %f\n", j, results[i][j].label, results[i][j].score);
         }
     }
+    gliclass_free_results_batch(results, results_shape, results_shape_size);
+    gliclass_cleanup(session);
     return 0;
 }

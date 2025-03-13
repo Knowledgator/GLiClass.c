@@ -61,7 +61,7 @@ void parallel_postprocess(
     const size_t num_labels[],
     const size_t num_labels_size, 
     const bool same_labels,
-    GLiClassResult** out_results[],
+    GLiClassResult* out_results[],
     size_t out_num_results[]
 );
 

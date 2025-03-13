@@ -55,7 +55,7 @@ void parallel_preprocess(
 
         // Prepare input tensors
         prepare_input_tensors(
-            &tokenized, 
+            &tokenized,
             &input_ids_tensors[i / session->inference_config->batch_size], 
             &attention_mask_tensors[i / session->inference_config->batch_size]
         );
@@ -75,7 +75,7 @@ void parallel_postprocess(
     const size_t num_labels[],
     const size_t num_labels_size, 
     const bool same_labels,
-    GLiClassResult** out_results[],
+    GLiClassResult* out_results[],
     size_t out_num_results[]
 ) {
     #pragma omp parallel for schedule(dynamic)

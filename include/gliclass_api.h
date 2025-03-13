@@ -108,7 +108,7 @@ GLICLASS_API bool gliclass_infer_batch(
     const char** labels[],
     const size_t* num_labels,
     const size_t num_labels_size, // TODO: rename
-    GLiClassResult*** out_results[],
+    GLiClassResult** out_results[],
     size_t* out_num_results[],
     size_t* out_num_results_size
 );
@@ -118,6 +118,7 @@ GLICLASS_API bool gliclass_infer_batch(
  */
 GLICLASS_API void gliclass_free_results(GLiClassResult* results, size_t num_results);
 
+GLICLASS_API void gliclass_free_results_batch(GLiClassResult** results, size_t* num_results, size_t num_results_size);
 /**
  * Cleanup session
  */

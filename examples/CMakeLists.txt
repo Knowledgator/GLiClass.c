@@ -13,13 +13,25 @@ set(GLICLASS_ROOTDIR ../)
 
 add_subdirectory(${GLICLASS_ROOTDIR} GLiClass)
 
-add_executable(inference_multi_label inference_multi_label.c)
+add_executable(inference_multi_label_batch inference_multi_label_batch.c)
 
-target_include_directories(inference_multi_label PRIVATE ${GLICLASS_ROOTDIR}/include)
-target_link_libraries(inference_multi_label GLiClass)
+target_include_directories(inference_multi_label_batch PRIVATE ${GLICLASS_ROOTDIR}/include)
+target_link_libraries(inference_multi_label_batch GLiClass)
 
 
-add_executable(inference_single_label inference_single_label.c)
+add_executable(inference_single_label_batch inference_single_label_batch.c)
 
-target_include_directories(inference_single_label PRIVATE ${GLICLASS_ROOTDIR}/include)
-target_link_libraries(inference_single_label GLiClass)
+target_include_directories(inference_single_label_batch PRIVATE ${GLICLASS_ROOTDIR}/include)
+target_link_libraries(inference_single_label_batch GLiClass)
+
+
+add_executable(inference_multi_label_single inference_multi_label_single.c)
+
+target_include_directories(inference_multi_label_single PRIVATE ${GLICLASS_ROOTDIR}/include)
+target_link_libraries(inference_multi_label_single GLiClass)
+
+
+add_executable(inference_single_label_single inference_single_label_single.c)
+
+target_include_directories(inference_single_label_single PRIVATE ${GLICLASS_ROOTDIR}/include)
+target_link_libraries(inference_single_label_single GLiClass)

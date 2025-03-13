@@ -139,10 +139,12 @@ bool gliclass_infer_batch(
     const char** labels[],
     const size_t* num_labels,
     const size_t num_labels_size, // TODO: rename
-    GLiClassResult*** out_results[],
+    GLiClassResult** out_results[],
     size_t* out_num_results[],
     size_t* out_num_results_size
 ) {
+    if (!session || !input_texts || !labels || !num_labels || num_labels_size == 0) return false;
+
     // Initialize queue mutex
     #ifndef _WIN32
     pthread_mutex_init(&queue_mutex, NULL);
@@ -150,10 +152,10 @@ bool gliclass_infer_batch(
     queue_mutex = CreateMutex(NULL, FALSE, NULL);
     #endif
 
-    *out_results = (GLiClassResult***)calloc(num_texts, sizeof(GLiClassResult**));
     *out_num_results_size = num_texts;
+    *out_results = (GLiClassResult**)calloc(*out_num_results_size, sizeof(GLiClassResult*));
     *out_num_results = (size_t*)calloc(num_texts, sizeof(size_t));
-    if (!out_num_results) {
+    if (!out_num_results || !out_results) {
         fprintf(stderr, "Unable to allocate results");
         return false;
     }
@@ -213,11 +215,49 @@ bool gliclass_infer_batch(
     return true;
 }
 
+bool gliclass_infer(
+    GLiClassSession* session,
+    const char* input_text,
+    const char* labels[],
+    const size_t num_labels,
+    GLiClassResult* out_results[],
+    size_t* out_num_results
+) {
+    if (!session || !input_text || !labels || num_labels == 0) return false;
+
+    size_t out_num_results_size_tmp = 0;
+    GLiClassResult** out_results_tmp = (GLiClassResult**)calloc(1, sizeof(GLiClassResult*));
+    size_t* out_num_results_tmp = (size_t*)calloc(1, sizeof(size_t));
+    if (!out_num_results_tmp || !out_results_tmp) {
+        fprintf(stderr, "Unable to allocate results");
+        return false;
+    }
+    bool ok = gliclass_infer_batch(session, &input_text, 1, &labels, &num_labels, 1, &out_results_tmp, &out_num_results_tmp, &out_num_results_size_tmp);
+
+    if (ok) {
+        *out_results = out_results_tmp[0];
+        *out_num_results = out_num_results_tmp[0];
+    }
+    free(out_results_tmp);
+    free(out_num_results_tmp);
+    return ok;
+}
 
 void gliclass_free_results(GLiClassResult* results, size_t num_results) {
     if (!results) return;
-    for (size_t i = 0; i < num_results; i++) {
-        free(results[i].label);
+    // for (size_t i = 0; i < num_results; i++) {
+    //     free(results[i].label);
+    // }
+    free(results);
+}
+
+void gliclass_free_results_batch(GLiClassResult** results, size_t* num_results, size_t num_results_size) {
+    if (!results) return;
+    for (size_t i = 0; i < num_results_size; i++) {
+        // for (size_t j = 0; j < num_results[i]; j++) {
+        //     free(results[i][j].label);
+        // }
+        free(results[i]);
     }
     free(results);
 }

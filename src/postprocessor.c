@@ -20,26 +20,24 @@ void process_multi_label(
     const float* const output_data,
     const size_t batch_size,
     const size_t num_classes,
-    const char*** labels,
+    const char** labels[],
     const size_t* num_labels,
     const size_t num_labels_size,
     const float threshold,
     const size_t text_id,
-    GLiClassResult** out_results[],
+    GLiClassResult* out_results[],
     size_t out_num_results[]
 ) {
     for (size_t i = 0; i < batch_size; i++) {
-        out_results[text_id+i] = (GLiClassResult**)calloc(num_classes, sizeof(GLiClassResult*));
+        out_results[text_id+i] = (GLiClassResult*)calloc(num_classes, sizeof(GLiClassResult));
         if (!out_results[text_id+i]) {
             fprintf(stderr, "Unable to allocate results");    
         }
 
-        fprintf(stdout, "TEXT: %ld\n", i); 
         for (size_t j = 0; j < num_classes; j++) {
             float logit = output_data[i * num_classes + j];
             float prob = sigmoid(logit);  // sigmoid function
             
-            fprintf(stdout, "%ld : %f\n", j, prob);
             if (prob < threshold) continue;
 
             const char* label = NULL;
@@ -53,8 +51,7 @@ void process_multi_label(
         
             out_num_results[text_id+i] += 1;
             if (!label) label = "[Unknown]";
-            out_results[text_id+i][j] = (GLiClassResult*)calloc(1, sizeof(GLiClassResult));
-            *out_results[text_id+i][j] = (GLiClassResult){(char*)label, prob};
+            out_results[text_id+i][j] = (GLiClassResult){(char*)label, prob};
         }
     }
 }
@@ -67,11 +64,11 @@ void process_single_label(
     const size_t* num_labels,
     const size_t num_labels_size,
     const size_t text_id,
-    GLiClassResult** out_results[],
+    GLiClassResult* out_results[],
     size_t out_num_results[]
 ) {
     for (size_t i = 0; i < batch_size; i++) {
-        out_results[text_id+i] = (GLiClassResult**)calloc(1, sizeof(GLiClassResult*));
+        out_results[text_id+i] = (GLiClassResult*)calloc(1, sizeof(GLiClassResult));
         if (!out_results[text_id+i]) {
             fprintf(stderr, "Unable to allocate results");    
         }
@@ -99,8 +96,7 @@ void process_single_label(
     
         if (!label) label = "[Unknown]";
 
-        out_results[text_id+i][0] = (GLiClassResult*)calloc(1, sizeof(GLiClassResult));
-        *out_results[text_id+i][0] = (GLiClassResult){(char*)label, max_prob};
+        out_results[text_id+i][0] = (GLiClassResult){(char*)label, max_prob};
     }
 }
 
@@ -125,7 +121,7 @@ void process_output_tensor(
     const size_t num_labels[],
     const size_t num_labels_size,
     const size_t batch_id,
-    GLiClassResult** out_results[],
+    GLiClassResult* out_results[],
     size_t out_num_results[]
 ) {
     OrtStatus* status = NULL;

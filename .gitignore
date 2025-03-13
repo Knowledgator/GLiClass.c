@@ -1,9 +1,9 @@
 .venv
-model/**
-onnx/**
+model/
+onnx/
+tokenizer/
 push_to_hf.ipynb
 build/**
-tokenizer/**
 .vscode
 data/**
 onnxruntime-*
