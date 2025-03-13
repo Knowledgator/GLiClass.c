@@ -1,8 +1,11 @@
+#include "read_data.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-#include "cJSON.h" 
+#include "cJSON.h"
+#include "gliclass_api.h"
 
 /**
  * Reads the entire content of a file and returns it as a string.
@@ -42,128 +45,28 @@ char* read_file(const char* filename) {
  * This function dynamically allocates memory for texts, labels, and related data. 
  * It is the caller's responsibility to free the allocated memory.
  */
-void parse_json(const char* json_string, char*** texts, size_t* num_texts, char**** labels,
-                size_t** num_labels, size_t* num_labels_size, bool* same_labels, char** classification_type) {
+ModelConfig* parse_model_config_json(const char* json_string) {
+    ModelConfig* config = (ModelConfig*)calloc(1, sizeof(ModelConfig));
+    if (!config) {
+        return NULL;
+    }
+
     // Parse json
     cJSON* json = cJSON_Parse(json_string);
     if (!json) {
         fprintf(stderr, "Failed to parse JSON: %s\n", cJSON_GetErrorPtr());
-        return;
+        return NULL;
     }
     
     // Get array texts
-    cJSON* texts_json = cJSON_GetObjectItemCaseSensitive(json, "texts");
-    if (cJSON_IsArray(texts_json)) {
-        *num_texts = cJSON_GetArraySize(texts_json);
-        *texts = (char**)malloc(*num_texts * sizeof(char*));
-        for (size_t i = 0; i < *num_texts; ++i) {
-            cJSON* text = cJSON_GetArrayItem(texts_json, i);
-            if (cJSON_IsString(text)) {
-                (*texts)[i] = strdup(text->valuestring);
-            }
-        }
-    }
-    // get value classification_type
-    cJSON* classification_type_json = cJSON_GetObjectItemCaseSensitive(json, "classification_type");
-    if (cJSON_IsString(classification_type_json)) {
-        *classification_type = strdup(classification_type_json->valuestring);
-    }
-
-    // get value same_labels
-    cJSON* same_labels_json = cJSON_GetObjectItemCaseSensitive(json, "same_labels");
-    if (cJSON_IsBool(same_labels_json)) {
-        *same_labels = cJSON_IsTrue(same_labels_json);
+    cJSON* prompt_first_field = cJSON_GetObjectItemCaseSensitive(json, "prompt_first");
+    if (prompt_first_field && cJSON_IsBool(prompt_first_field)) {
+        config->prompt_first = cJSON_IsTrue(prompt_first_field);
+    } else {
+        fprintf(stderr, "Unexpected config format, expected 'prompt_first' field of bool type");
+        return NULL;
     }
     
-    if (*same_labels) {
-        // Get array labels
-        cJSON* labels_json = cJSON_GetObjectItemCaseSensitive(json, "labels");
-        if (cJSON_IsArray(labels_json)) {
-            *num_labels_size = cJSON_GetArraySize(labels_json);
-            
-            if (*num_labels_size > 0) {
-                cJSON* first_labels_group = cJSON_GetArrayItem(labels_json, 0);
-                if (cJSON_IsArray(first_labels_group)) {
-                    *num_labels_size = cJSON_GetArraySize(first_labels_group);
-                    *labels = (char***)malloc(sizeof(char**));  // One set of labels for all texts
-                    (*labels)[0] = (char**)malloc(*num_labels_size * sizeof(char*));
-                    
-                    for (size_t i = 0; i < *num_labels_size; ++i) {
-                        cJSON* label = cJSON_GetArrayItem(first_labels_group, i);
-                        if (cJSON_IsString(label)) {
-                            (*labels)[0][i] = strdup(label->valuestring);
-                        }
-                    }
-
-                    // Set the same number of labels for each text
-                    *num_labels = (size_t*)malloc(*num_texts * sizeof(size_t));
-                    for (size_t i = 0; i < *num_texts; ++i) {
-                        (*num_labels)[i] = *num_labels_size;
-                    }
-                }
-            }
-        }
-    } else {
-        // We get an array of labels for each text (array of arrays)
-        cJSON* labels_json = cJSON_GetObjectItemCaseSensitive(json, "labels");
-        if (cJSON_IsArray(labels_json)) {
-            // We check that the number of tags matches the number of texts
-            if (cJSON_GetArraySize(labels_json) != *num_texts) {
-                fprintf(stderr, "Error:the number of arrays of labels does not match the number of texts.\n");
-                cJSON_Delete(json);
-                return;
-            }
-
-            *num_labels = (size_t*)malloc(*num_texts * sizeof(size_t)); // dynamic array num_labels
-            *labels = (char***)malloc(*num_texts * sizeof(char**));     // array of arrays for each group of labels
-            
-            // We iterate over each text
-            for (size_t i = 0; i < *num_texts; ++i) {
-                cJSON* text_labels_json = cJSON_GetArrayItem(labels_json, i);
-                if (cJSON_IsArray(text_labels_json)) {
-                    size_t num_labels_for_text = cJSON_GetArraySize(text_labels_json);
-                    (*num_labels)[i] = num_labels_for_text;
-                    (*labels)[i] = (char**)malloc(num_labels_for_text * sizeof(char*));
-                    if (!(*labels)[i]) {
-                        fprintf(stderr, "Error: failed to allocate memory for text labels %zu.\n", i);
-                        cJSON_Delete(json);
-                        return;
-                    }
-                    for (size_t j = 0; j < num_labels_for_text; ++j) {
-                        cJSON* label_item  = cJSON_GetArrayItem(text_labels_json, j);
-                        if (cJSON_IsString(label_item)) {
-                            (*labels)[i][j] = strdup(label_item->valuestring);
-                        }
-                    }
-                }else{
-                    fprintf(stderr, "Error: labels forr text %zu are not array.\n", i);
-                }
-            }
-        }
-    }
     cJSON_Delete(json);  // free memory
-}
-
-/**
- * Converts a string to a boolean value.
- * 
- * Accepts the following string values:
- * - "true" or "1" will return true
- * - "false" or "0" will return false
- * 
- * If the string does not match these values, the function prints an error message
- * and exits the program with code 1.
- *
- * @param str The string to convert to a boolean. Expected values are "true", "false", "1", or "0".
- * @return true if the input is "true" or "1", false if the input is "false" or "0".
- */
-bool string_to_bool(const char *str) {
-    if (strcmp(str, "true") == 0 || strcmp(str, "1") == 0) {
-        return true;
-    } else if (strcmp(str, "false") == 0 || strcmp(str, "0") == 0) {
-        return false;
-    } else {
-        printf("Invalid value for bool argument. Use 'true' or 'false'.\n");
-        exit(1);
-    }
+    return config;
 }

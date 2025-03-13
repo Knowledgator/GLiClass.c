@@ -1,8 +1,22 @@
+#include "model.h"
+
 #include <stdio.h>
 #include <stdlib.h>
-#include "onnxruntime_c_api.h"
-#include "tokenizer.h"
-#include "model.h"
+#ifndef _WIN32
+    #include <unistd.h>
+#else
+    #include <io.h>
+
+    #define access _access
+    #define F_OK 0
+#endif
+
+#include "read_data.h"
+
+ModelConfig* initialize_model_config(const char* model_config_path) {
+    const char* json_string = read_file(model_config_path);
+    return parse_model_config_json(json_string);
+}
 
 ////////////////////////////////////////////////////////// TO TENSORS //////////////////////////////////////////////////////
 /**
@@ -236,6 +250,13 @@ OrtSession* create_ort_session(OrtEnv* env, const char* model_path, int num_thre
     OrtSession* session = NULL;
     OrtStatus* status = NULL;
 
+    // Check existence
+    if (access(model_path, F_OK) != 0) {
+        fprintf(stderr, "Error: Model file not found at path: %s\n", model_path);
+        g_ort->ReleaseEnv(env);
+        return NULL;
+    }
+
     // Create session options
     status = g_ort->CreateSessionOptions(&session_options);
     if (status != NULL) {
@@ -317,11 +338,4 @@ OrtEnv* initialize_ort_environment() {
         return NULL;
     }
     return env;
-}
-
-/**
- * Initializes the ONNX Runtime API.
- */
-void initialize_ort_api() {
-    g_ort = OrtGetApiBase()->GetApi(ORT_API_VERSION);
 }
