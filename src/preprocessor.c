@@ -51,7 +51,7 @@ const char** prepare_inputs(
             return NULL;
         }
     }
-    return inputs;
+    return (const char**)inputs;
 }
 
 void append_label(const char* label, char* result) {
