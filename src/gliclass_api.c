@@ -104,34 +104,65 @@ GLiClassSession* gliclass_init(
     return session;
 }
 
-// single process
-bool gliclass_infer(
-    GLiClassSession* session,
-    const char* input_text,
-    const char* labels[],
-    const size_t num_labels,
-    GLiClassResult* out_results[],
-    size_t* out_num_results
-) {
-    if (!session || !input_text || !labels || num_labels == 0) return false;
+// // single process
+// bool gliclass_infer(
+//     GLiClassSession* session,
+//     const char* input_text,
+//     const char* labels[],
+//     const size_t num_labels,
+//     GLiClassResult* out_results[],
+//     size_t* out_num_results
+// ) {
+//     if (!session || !input_text || !labels || num_labels == 0) return false;
 
-    // Allocate output array for results
-    *out_num_results = num_labels;
-    *out_results = (GLiClassResult*)calloc(*out_num_results, sizeof(GLiClassResult));
-    if (!*out_results) return false;
+//     // Allocate output array for results
+//     *out_num_results = num_labels;
+//     *out_results = (GLiClassResult*)calloc(*out_num_results, sizeof(GLiClassResult));
+//     if (!*out_results) {
+//         fprintf(stderr, "Unable to allocate results");
+//         return false;
+//     }
 
-    // Fill each label with a random score
-    for (size_t i = 0; i < num_labels; ++i) {
-        (*out_results)[i].label = strdup(labels[i]); // Duplicate label text
-        (*out_results)[i].score = (float)rand() / (float)RAND_MAX; // Random score between 0.0 and 1.0
-    }
+//     char* input = prepare_input(input_text, labels, num_labels, session->model_config->prompt_first);
+//     if (!input) {
+//         fprintf(stderr, "Error while preparing text");
+//         free(input);
+//         return false;
+//     }
 
-    return true; // Mock success
-}
+//     TokenizedInput tokenized = tokenize_input(
+//         session->tokenizer, 
+//         (const char**)input, 
+//         session->inference_config->max_length
+//     );
+
+//     OrtValue* input_ids_tensor = create_tensor(tokenized.input_ids, 1, tokenized.seq_length);
+//     if (!input_ids_tensor) {
+//         return false;
+//     }
+//     OrtValue* attention_mask_tensor = create_tensor(tokenized.attention_mask, 1, tokenized.seq_length);
+//     if (!attention_mask_tensor) {
+//         g_ort->ReleaseValue(input_ids_tensor);
+//         return -1;
+//     }
+//     OrtValue* output_tensor = run_inference(session->session, input_ids_tensor, attention_mask_tensor);
+
+//     process_output_tensor(
+//         session,
+//         output_tensor, 
+//         labels, 
+//         &num_labels, 
+//         1, 
+//         0, 
+//         &out_results,
+//         &out_num_results
+//     );
+
+//     return true;
+// }
 
 
 // batch process
-// TODO: add check for labels
 bool gliclass_infer_batch(
     GLiClassSession* session,
     const char* input_texts[],
