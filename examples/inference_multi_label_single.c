@@ -6,7 +6,7 @@ int main() {
     const char* model_config_path = "./onnx/config.json";
     const char* tokenizer_path = "./tokenizer/tokenizer.json";
     InferenceConfig config = {
-        8, 2048, 8, 0.5, "multi-label"
+        8, 2048, 0.5, "multi-label"
     };
 
     // Initialize session (model setup)
@@ -14,7 +14,8 @@ int main() {
         model_path,
         model_config_path,
         tokenizer_path,
-        &config
+        &config,
+        8
     );
 
     const char* text = "ONNX is an open-source format designed to enable the interoperability of AI models.";
@@ -46,11 +47,7 @@ int main() {
     for (size_t i = 0; i < num_results; i++) {
         fprintf(stdout, "Label_%ld: %s, score: %f\n", i, results[i].label, results[i].score);
     }
-    fprintf(stdout, "OK");
-    fflush(stdout);
     gliclass_free_results(results, num_results);
-    fprintf(stdout, "OK");
-    fflush(stdout);
     gliclass_cleanup(session);
     return 0;
 }

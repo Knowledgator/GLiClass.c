@@ -122,8 +122,6 @@ int prepare_input_tensors(TokenizedInputs* tokenized, OrtValue** input_ids_tenso
 }
 
 
-
-
 ////////////////////////////////////////////////////// ONNX ////////////////////////////////////////////////////////////////////////
 /**
  * Runs inference using the ONNX model session and input tensors.
@@ -220,22 +218,24 @@ OrtValue* run_inference(OrtSession* session, OrtValue* input_ids_tensor, OrtValu
     return output_tensor;
 }
 
+#ifdef _WIN32
 wchar_t* convert_path(const char* path) {
     size_t len = mbstowcs(NULL, path, 0);
     if(len == (size_t)-1) {
         fprintf(stderr, "Error: Unable to convert path to wchar_t*: %s\n", path);
-        exit(1);
+        return NULL;
     }
 
     wchar_t *wide_str = malloc((len + 1) * sizeof(wchar_t));
     if(!wide_str) {
         fprintf(stderr, "Error: Unable to convert path to wchar_t*: %s\n", path);
-        exit(1);
+        return NULL;
     }
 
     mbstowcs(wide_str, path, len + 1);
     return wide_str;
 }
+#endif
 
 /**
  * Creates and initializes an ONNX Runtime session from a model file.
@@ -253,7 +253,6 @@ OrtSession* create_ort_session(OrtEnv* env, const char* model_path, int num_thre
     // Check existence
     if (access(model_path, F_OK) != 0) {
         fprintf(stderr, "Error: Model file not found at path: %s\n", model_path);
-        g_ort->ReleaseEnv(env);
         return NULL;
     }
 
@@ -305,6 +304,10 @@ OrtSession* create_ort_session(OrtEnv* env, const char* model_path, int num_thre
     // Load the model and create a session
     #ifdef _WIN32
     wchar_t* path = convert_path(model_path); 
+    if (!path) {
+        g_ort->ReleaseSessionOptions(ort_session_options);
+        return NULL;
+    }
     status = g_ort->CreateSession(env, path, session_options, &session);
     free(path);
     #else

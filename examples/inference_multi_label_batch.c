@@ -6,7 +6,7 @@ int main() {
     const char* model_config_path = "./onnx/config.json";
     const char* tokenizer_path = "./tokenizer/tokenizer.json";
     InferenceConfig config = {
-        8, 2048, 8, 0.5, "multi-label"
+        8, 2048, 0.5, "multi-label"
     };
 
     // Initialize session (model setup)
@@ -14,7 +14,8 @@ int main() {
         model_path,
         model_config_path,
         tokenizer_path,
-        &config
+        &config,
+        8
     );
 
     const char* texts[] = {
@@ -46,7 +47,7 @@ int main() {
         labels_shape_size,
         &results,
         &results_shape,
-        &results_shape_size // TODO: remove?
+        &results_shape_size
     );
 
     if (!ok) {

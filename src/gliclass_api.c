@@ -25,16 +25,18 @@ HANDLE queue_mutex;
 
 const OrtApi* g_ort = NULL;
 
+bool initialize_ort_api() {
+    g_ort = OrtGetApiBase()->GetApi(ORT_API_VERSION);
+    return (bool)g_ort;
+}
+
 bool validate_inference_config(const InferenceConfig* inference_config) {
-    char* template = "Inference paramete is invalid: %s";
+    char* template = "Inference parameter is invalid: %s";
     if (inference_config->batch_size == 0) {
         fprintf(stderr, template, "batch_size shouldn't equal zero");
         return false;
     } else if (inference_config->max_length == 0) {
         fprintf(stderr, template, "max_length shouldn't equal zero");
-        return false;
-    } else if (inference_config->cpu_threads == 0) {
-        fprintf(stderr, template, "cpu_threads shouldn't equal zero");
         return false;
     } else if (inference_config->threshold < 0 && inference_config->threshold > 1) {
         fprintf(stderr, template, "threshold should be in range 0 ... 1");
@@ -57,11 +59,16 @@ GLiClassSession* gliclass_init(
     const char* model_path, 
     const char* model_config_path,
     const char* tokenizer_path, 
-    const InferenceConfig* inference_config
+    const InferenceConfig* inference_config,
+    const size_t num_threads
 ) {
     // Initializes the ONNX Runtime API
-    g_ort = OrtGetApiBase()->GetApi(ORT_API_VERSION);
-    if (!g_ort) return NULL;
+    if (!initialize_ort_api()) return false;
+
+    if (num_threads == 0) {
+        fprintf(stderr, "num_threads shouldn't equal zero");
+        return false;
+    }
 
     GLiClassSession* session = calloc(1, sizeof(GLiClassSession));
     if (!session) return NULL;
@@ -94,13 +101,51 @@ GLiClassSession* gliclass_init(
 
     // Initialize ONNX session (model loading)
     session->session = create_ort_session(
-        session->env, model_path, session->inference_config->cpu_threads
+        session->env, model_path, num_threads
     );
     if (!session->session) {
         gliclass_cleanup(session);
         return NULL;
     }
 
+    return session;
+}
+
+GLiClassSession* gliclass_init_custom_ort(
+    const char* model_config_path,
+    const char* tokenizer_path, 
+    const InferenceConfig* inference_config,
+    OrtSession* ort_session
+) {
+    if (!g_ort || !ort_session) {
+        fprintf(stderr, "ORT API and ORT session should be initialized!");
+        return NULL;
+    }
+
+    GLiClassSession* session = calloc(1, sizeof(GLiClassSession));
+    if (!session) return NULL;
+
+    // Initialize ONNX session (model loading)
+    session->session = ort_session;
+
+    if (!validate_inference_config(inference_config)) {
+        return NULL;
+    }
+    session->inference_config = inference_config;
+
+    // Initialize the model config
+    session->model_config = initialize_model_config(model_config_path);
+    if (!session->model_config) {
+        gliclass_cleanup(session);
+        return NULL;
+    }
+
+    // Initialize tokenizer
+    session->tokenizer = create_tokenizer(tokenizer_path);
+    if (!session->tokenizer) {
+        gliclass_cleanup(session);
+        return NULL;
+    }
     return session;
 }
 
@@ -298,5 +343,11 @@ void gliclass_cleanup(GLiClassSession* session) {
     if (session->tokenizer) tokenizers_free(session->tokenizer);
     if (session->env) g_ort->ReleaseEnv(session->env);
     if (session->session) g_ort->ReleaseSession(session->session);
+    free(session);
+}
+
+void gliclass_cleanup_custom_ort(GLiClassSession* session) {
+    if (!session) return;
+    if (session->tokenizer) tokenizers_free(session->tokenizer);
     free(session);
 }

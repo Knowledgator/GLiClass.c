@@ -39,7 +39,6 @@ typedef struct {
 typedef struct {
     size_t batch_size;
     size_t max_length;
-    size_t cpu_threads;
     float threshold;
     char* classification_type;
 } InferenceConfig;
@@ -58,6 +57,8 @@ typedef struct {
     float score;   // Confidence score
 } GLiClassResult;
 
+GLICLASS_API bool initialize_ort_api();
+
 /**
  * Initialize GLiClass model and tokenizer
  * @param model_path Path to ONNX model
@@ -69,7 +70,22 @@ GLICLASS_API GLiClassSession* gliclass_init(
     const char* model_path, 
     const char* model_config_path,
     const char* tokenizer_path, 
-    const InferenceConfig* inference_config
+    const InferenceConfig* inference_config,
+    const size_t num_threads
+);
+
+/**
+ * Initialize GLiClass model and tokenizer
+ * @param model_path Path to ONNX model
+ * @param tokenizer_path Path to tokenizer file
+ * @param num_threads Number of threads
+ * @return GLiClassSession handle, or NULL on error
+ */
+GLICLASS_API GLiClassSession* gliclass_init_custom_ort(
+    const char* model_config_path,
+    const char* tokenizer_path, 
+    const InferenceConfig* inference_config,
+    OrtSession* session
 );
 
 /**
@@ -124,6 +140,7 @@ GLICLASS_API void gliclass_free_results_batch(GLiClassResult** results, size_t* 
  */
 GLICLASS_API void gliclass_cleanup(GLiClassSession* session);
 
+GLICLASS_API void gliclass_cleanup_custom_ort(GLiClassSession* session);
 
 #ifdef __cplusplus
 }
