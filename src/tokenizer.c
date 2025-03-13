@@ -1,10 +1,19 @@
+#include "tokenizer.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include <stdbool.h>
+#ifndef _WIN32
+    #include <unistd.h>
+#else
+    #include <io.h>
 
-#include "tokenizer.h"
+    #define access _access
+    #define F_OK 0
+#endif
+
 
 /**
  * Tokenizes a batch of input texts using the provided tokenizer.
@@ -16,15 +25,15 @@
  * @return A TokenizedInputs structure containing token IDs, token type IDs, and attention masks for the input texts.
  *         The caller is responsible for freeing the memory allocated for the returned structure.
  */
-TokenizedInputs tokenize_inputs(TokenizerHandle tokenizer, const char* inputs[], size_t num_texts, size_t max_length) {
-    TokenizerEncodeResult* results = (TokenizerEncodeResult*)malloc(num_texts * sizeof(TokenizerEncodeResult));
+TokenizedInputs tokenize_inputs(TokenizerHandle tokenizer, const char** inputs, size_t num_texts, size_t max_length) {
+    TokenizerEncodeResult* results = (TokenizerEncodeResult*)calloc(num_texts, sizeof(TokenizerEncodeResult));
     if (!results) {
         fprintf(stderr, "Error while allocating memmory for tokenization results\n");
         exit(1);
     }
 
     // Get len of each text
-    size_t* input_lengths = (size_t*)malloc(num_texts * sizeof(size_t));
+    size_t* input_lengths = (size_t*)calloc(num_texts, sizeof(size_t));
     for (size_t i = 0; i < num_texts; ++i) {
         input_lengths[i] = strlen(inputs[i]);
     }
@@ -33,7 +42,7 @@ TokenizedInputs tokenize_inputs(TokenizerHandle tokenizer, const char* inputs[],
     tokenizers_encode_batch(tokenizer, inputs, input_lengths, num_texts, add_special_tokens, results);
 
     // We trim the sequences to max_length and find the maximum length after trimming
-    size_t* seq_lengths = (size_t*)malloc(num_texts * sizeof(size_t));
+    size_t* seq_lengths = (size_t*)calloc(num_texts, sizeof(size_t));
     if (!seq_lengths) {
         fprintf(stderr, "Error while allocating memory for sequence lengths\n");
         free(results);
@@ -55,16 +64,16 @@ TokenizedInputs tokenize_inputs(TokenizerHandle tokenizer, const char* inputs[],
 
     // Mem alloc for tokenized data
     TokenizedInputs tokenized;
-    tokenized.input_ids = (int**)malloc(num_texts * sizeof(int*));
-    tokenized.token_type_ids = (int**)malloc(num_texts * sizeof(int*));
-    tokenized.attention_mask = (int**)malloc(num_texts * sizeof(int*));
+    tokenized.input_ids = (int**)calloc(num_texts, sizeof(int*));
+    tokenized.token_type_ids = (int**)calloc(num_texts, sizeof(int*));
+    tokenized.attention_mask = (int**)calloc(num_texts, sizeof(int*));
     tokenized.batch_size = num_texts;
     tokenized.seq_length = seq_length;
 
     for (size_t i = 0; i < num_texts; ++i) {
-        tokenized.input_ids[i] = (int*)malloc(seq_length * sizeof(int));
-        tokenized.token_type_ids[i] = (int*)malloc(seq_length * sizeof(int));
-        tokenized.attention_mask[i] = (int*)malloc(seq_length * sizeof(int));
+        tokenized.input_ids[i] = (int*)calloc(seq_length, sizeof(int));
+        tokenized.token_type_ids[i] = (int*)calloc(seq_length, sizeof(int));
+        tokenized.attention_mask[i] = (int*)calloc(seq_length, sizeof(int));
 
         for (size_t j = 0; j < seq_length; ++j) {
             if (j < results[i].len) {
@@ -142,6 +151,12 @@ void free_tokenized_inputs(TokenizedInputs* tokenized) {
  *         The caller is responsible for freeing the tokenizer handle after use.
  */
 TokenizerHandle create_tokenizer(const char* filepath) {
+    // Check existence
+    if (access(filepath, F_OK) != 0) {
+        fprintf(stderr, "Error: Tokenizer file not found at path: %s\n", filepath);
+        return NULL;
+    }
+
     // Read tokenizer.json
     FILE* file = fopen(filepath, "rb");
     if (!file) {
@@ -154,7 +169,7 @@ TokenizerHandle create_tokenizer(const char* filepath) {
     fseek(file, 0, SEEK_SET);
 
     // Allocate memory for JSON
-    char* json = (char*)malloc(json_len + 1);
+    char* json = (char*)calloc(json_len + 1, sizeof(char));
     if (!json) {
         fprintf(stderr, "Cant allocate memory for JSON\n");
         fclose(file);

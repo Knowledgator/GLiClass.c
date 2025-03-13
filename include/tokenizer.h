@@ -18,7 +18,7 @@ typedef struct {
     size_t seq_length;       /**< Maximum sequence length for the input texts. */
 } TokenizedInputs;
 
-TokenizedInputs tokenize_inputs(TokenizerHandle tokenizer, const char* inputs[], size_t num_texts, size_t max_length);
+TokenizedInputs tokenize_inputs(TokenizerHandle tokenizer, const char* inputs[], const size_t num_texts, const size_t max_length);
 void print_tokenized_inputs(const TokenizedInputs* tokenized);
 void free_tokenized_inputs(TokenizedInputs* tokenized);
 TokenizerHandle create_tokenizer(const char* filepath);
