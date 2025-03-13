@@ -113,18 +113,18 @@ set(TOKENIZER_CPP_PATH "./tokenizers-cpp")
 # Path for cJSON
 set(CJSON_PATH "./cJSON")
 
-# Add tokenizers-cpp as a subdirectory
-add_subdirectory(${TOKENIZER_CPP_PATH} tokenizers EXCLUDE_FROM_ALL)
-
-# Add cJSON as a subdirectory
-add_subdirectory(${CJSON_PATH} cJSON EXCLUDE_FROM_ALL)
-
 # Find OpenMP package
 find_package(OpenMP REQUIRED)
 
+# Add tokenizers-cpp as a subdirectory
+add_subdirectory(${TOKENIZER_CPP_PATH} tokenizers)
+
+# Add cJSON as a subdirectory
+add_subdirectory(${CJSON_PATH} cJSON)
+
 # Add shared library
 add_library(GLiClass SHARED
-              gliclass_api.c
+              src/gliclass_api.c
               src/parallel_processor.c
               src/postprocessor.c
               src/model.c
@@ -137,7 +137,7 @@ target_compile_definitions(GLiClass PRIVATE GLICLASS_EXPORTS)
 
 # Public headers (for installation)
 set_target_properties(GLiClass PROPERTIES
-  PUBLIC_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/gliclass_api.h")
+  PUBLIC_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/include/gliclass_api.h")
 
 # Include directories with tokenizers-cpp header files
 target_include_directories(GLiClass PUBLIC
