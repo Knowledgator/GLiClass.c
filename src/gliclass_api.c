@@ -219,7 +219,10 @@ bool gliclass_infer_batch(
     size_t* out_num_results[],
     size_t* out_num_results_size
 ) {
-    if (!session || !input_texts || !labels || !num_labels || num_labels_size == 0) return false;
+    if (
+        !session || !input_texts || !labels || !num_labels || num_labels_size == 0 
+        || (num_labels_size != 1 && num_labels_size != num_texts)
+    ) return false;
 
     // Initialize queue mutex
     #ifndef _WIN32
@@ -267,7 +270,11 @@ bool gliclass_infer_batch(
         #else
         output_tensors[i] = run_inference(session->session, input_ids_tensors[i], attention_mask_tensors[i]);
         #endif
+        g_ort->ReleaseValue(input_ids_tensors[i]);
+        g_ort->ReleaseValue(attention_mask_tensors[i]);
     }
+    free(input_ids_tensors);
+    free(attention_mask_tensors);
 
     // Postprocess stage - processing batches
     parallel_postprocess(

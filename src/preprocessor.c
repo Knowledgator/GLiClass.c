@@ -37,9 +37,9 @@ const char** prepare_inputs(
 
     for (size_t i = 0; i < num_texts; ++i) {
         if (same_labels){
-            inputs[i] = prepare_input(texts[i], labels[0], num_labels[0], session->model_config->prompt_first);
+            inputs[i] = prepare_input(texts[i], labels[0], num_labels[0], session->model_config->prompt_first, session->inference_config->add_prefix_space);
         } else {
-            inputs[i] = prepare_input(texts[i], labels[i], num_labels[i], session->model_config->prompt_first);
+            inputs[i] = prepare_input(texts[i], labels[i], num_labels[i], session->model_config->prompt_first, session->inference_config->add_prefix_space);
         }
 
         if (!inputs[i]) {
@@ -89,9 +89,10 @@ char* prepare_input(
     const char* text, 
     const char** labels,
     size_t num_labels,
-    bool prompt_first
+    bool prompt_first,
+    bool append_prefix_space
 ){
-    const char* label_prefix = "<<LABEL>>";
+    const char* label_prefix = append_prefix_space ? "<<LABEL>>" : "<<LABEL>> ";
     const char* sep_tag = "<<SEP>>";
     size_t total_len = strlen(text) + strlen(sep_tag) + 1; // +1 for null terminator
 

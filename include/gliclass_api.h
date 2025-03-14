@@ -41,6 +41,7 @@ typedef struct {
     size_t max_length;
     float threshold;
     char* classification_type;
+    bool add_prefix_space;
 } InferenceConfig;
 
 typedef struct {

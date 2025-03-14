@@ -38,7 +38,7 @@ int main() {
     size_t num_threads = 8;
 
     InferenceConfig config = {
-        8, 2048, 0.5, "multi-label"
+        8, 2048, 0.5, "multi-label", false
     };
 
     // Initializes the ONNX Runtime API

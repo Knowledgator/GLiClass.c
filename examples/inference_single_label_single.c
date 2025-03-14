@@ -6,7 +6,7 @@ int main() {
     const char* model_config_path = "./onnx/config.json";
     const char* tokenizer_path = "./tokenizer/tokenizer.json";
     InferenceConfig config = {
-        8, 2048, 0.5, "single-label"
+        8, 2048, 0.5, "single-label", false
     };
 
     // Initialize session (model setup)
