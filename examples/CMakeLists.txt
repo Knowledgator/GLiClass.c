@@ -35,3 +35,9 @@ add_executable(inference_single_label_single inference_single_label_single.c)
 
 target_include_directories(inference_single_label_single PRIVATE ${GLICLASS_ROOTDIR}/include)
 target_link_libraries(inference_single_label_single GLiClass)
+
+
+add_executable(inference_custom_ort inference_custom_ort.c)
+
+target_include_directories(inference_custom_ort PRIVATE ${GLICLASS_ROOTDIR}/include)
+target_link_libraries(inference_custom_ort GLiClass)
