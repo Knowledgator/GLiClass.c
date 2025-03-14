@@ -52,6 +52,7 @@ int main() {
 
     if (!ok) {
         fprintf(stderr, "Errors occur during inference!");
+        gliclass_cleanup(session);
         return 1;
     }
     

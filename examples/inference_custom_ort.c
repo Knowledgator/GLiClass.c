@@ -162,6 +162,7 @@ int main() {
 
     if (!ok) {
         fprintf(stderr, "Errors occur during inference!");
+        gliclass_cleanup(session);
         return 1;
     }
     
@@ -169,8 +170,6 @@ int main() {
     for (size_t i = 0; i < num_results; i++) {
         fprintf(stdout, "Label_%ld: %s, score: %f\n", i, results[i].label, results[i].score);
     }
-    fprintf(stdout, "OK");
-    fflush(stdout);
     gliclass_free_results(results, num_results);
     gliclass_cleanup(session);
 
