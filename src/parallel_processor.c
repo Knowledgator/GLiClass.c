@@ -91,7 +91,7 @@ void parallel_postprocess(
         );
         const size_t batch_num_labels_size = same_labels ? num_labels_size: batch_size;
 
-        process_output_tensor(
+        process_output_tensor_batch(
             session,
             output_tensors[i], 
             batch_labels, 

@@ -9,8 +9,9 @@
 ModelConfig* initialize_model_config(const char* model_config_path);
 
 ///// TO TENSORS /////
-int64_t* flatten_int_array(int** data, size_t rows, size_t cols);
-OrtValue* create_tensor(int64_t* data, size_t rows, size_t cols) ;
+int64_t* flatten_int_array(int64_t** data, size_t rows, size_t cols);
+OrtValue* create_tensor(int64_t* data, size_t rows, size_t cols);
+int prepare_input_tensor(TokenizedInput* tokenized, OrtValue** input_ids_tensor, OrtValue** attention_mask_tensor);
 int prepare_input_tensors(TokenizedInputs* tokenized, OrtValue** input_ids_tensor, OrtValue** attention_mask_tensor);
 
 /// ONNX ///
