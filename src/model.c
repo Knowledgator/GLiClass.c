@@ -305,7 +305,7 @@ OrtSession* create_ort_session(OrtEnv* env, const char* model_path, int num_thre
     #ifdef _WIN32
     wchar_t* path = convert_path(model_path); 
     if (!path) {
-        g_ort->ReleaseSessionOptions(ort_session_options);
+        g_ort->ReleaseSessionOptions(session_options);
         return NULL;
     }
     status = g_ort->CreateSession(env, path, session_options, &session);
