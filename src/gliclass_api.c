@@ -149,63 +149,81 @@ GLiClassSession* gliclass_init_custom_ort(
     return session;
 }
 
-// // single process
-// bool gliclass_infer(
-//     GLiClassSession* session,
-//     const char* input_text,
-//     const char* labels[],
-//     const size_t num_labels,
-//     GLiClassResult* out_results[],
-//     size_t* out_num_results
-// ) {
-//     if (!session || !input_text || !labels || num_labels == 0) return false;
 
-//     // Allocate output array for results
-//     *out_num_results = num_labels;
-//     *out_results = (GLiClassResult*)calloc(*out_num_results, sizeof(GLiClassResult));
-//     if (!*out_results) {
-//         fprintf(stderr, "Unable to allocate results");
-//         return false;
-//     }
+// single process
+bool gliclass_infer(
+    GLiClassSession* session,
+    const char* input_text,
+    const char* labels[],
+    const size_t num_labels,
+    GLiClassResult* out_results[],
+    size_t* out_num_results
+) {
+    if (!session || !input_text || !labels || num_labels == 0) return false;
 
-//     char* input = prepare_input(input_text, labels, num_labels, session->model_config->prompt_first);
-//     if (!input) {
-//         fprintf(stderr, "Error while preparing text");
-//         free(input);
-//         return false;
-//     }
+    // Initialize queue mutex
+    #ifndef _WIN32
+    pthread_mutex_init(&queue_mutex, NULL);
+    #else
+    queue_mutex = CreateMutex(NULL, FALSE, NULL);
+    #endif
 
-//     TokenizedInput tokenized = tokenize_input(
-//         session->tokenizer, 
-//         (const char**)input, 
-//         session->inference_config->max_length
-//     );
+    // Allocate output array for results
+    *out_num_results = 0;
+    *out_results = (GLiClassResult*)calloc(num_labels, sizeof(GLiClassResult));
+    if (!*out_results) {
+        fprintf(stderr, "Unable to allocate results");
+        return false;
+    }
 
-//     OrtValue* input_ids_tensor = create_tensor(tokenized.input_ids, 1, tokenized.seq_length);
-//     if (!input_ids_tensor) {
-//         return false;
-//     }
-//     OrtValue* attention_mask_tensor = create_tensor(tokenized.attention_mask, 1, tokenized.seq_length);
-//     if (!attention_mask_tensor) {
-//         g_ort->ReleaseValue(input_ids_tensor);
-//         return -1;
-//     }
-//     OrtValue* output_tensor = run_inference(session->session, input_ids_tensor, attention_mask_tensor);
+    char* input = prepare_input(input_text, labels, num_labels, session->model_config->prompt_first, session->inference_config->add_prefix_space);
+    if (!input) {
+        fprintf(stderr, "Error while preparing text");
+        return false;
+    }
 
-//     process_output_tensor(
-//         session,
-//         output_tensor, 
-//         labels, 
-//         &num_labels, 
-//         1, 
-//         0, 
-//         &out_results,
-//         &out_num_results
-//     );
+    TokenizedInput tokenized = tokenize_input(
+        session->tokenizer, 
+        (const char*)input, 
+        session->inference_config->max_length
+    );
 
-//     return true;
-// }
+    OrtValue* input_ids_tensor = NULL;
+    OrtValue* attention_mask_tensor = NULL;
+    prepare_input_tensor(
+        &tokenized,
+        &input_ids_tensor, 
+        &attention_mask_tensor
+    );
 
+
+    #ifdef USE_CUDA // GPU
+    pthread_mutex_lock(&queue_mutex);
+    OrtValue* output_tensor = run_inference(session->session, input_ids_tensor, attention_mask_tensor);
+    pthread_mutex_unlock(&queue_mutex);
+    #else
+    OrtValue* output_tensor = run_inference(session->session, input_ids_tensor, attention_mask_tensor);
+    #endif
+    g_ort->ReleaseValue(input_ids_tensor);
+    g_ort->ReleaseValue(attention_mask_tensor);
+    free_tokenized_input(&tokenized);
+
+    process_output_tensor(
+        session,
+        output_tensor, 
+        labels, 
+        num_labels, 
+        *out_results,
+        out_num_results
+    );
+
+    #ifndef _WIN32
+	pthread_mutex_destroy(&queue_mutex);
+    #else
+	CloseHandle(queue_mutex);
+    #endif
+    return true;
+}
 
 // batch process
 bool gliclass_infer_batch(
@@ -296,34 +314,6 @@ bool gliclass_infer_batch(
 	CloseHandle(queue_mutex);
     #endif
     return true;
-}
-
-bool gliclass_infer(
-    GLiClassSession* session,
-    const char* input_text,
-    const char* labels[],
-    const size_t num_labels,
-    GLiClassResult* out_results[],
-    size_t* out_num_results
-) {
-    if (!session || !input_text || !labels || num_labels == 0) return false;
-
-    size_t out_num_results_size_tmp = 0;
-    GLiClassResult** out_results_tmp = (GLiClassResult**)calloc(1, sizeof(GLiClassResult*));
-    size_t* out_num_results_tmp = (size_t*)calloc(1, sizeof(size_t));
-    if (!out_num_results_tmp || !out_results_tmp) {
-        fprintf(stderr, "Unable to allocate results");
-        return false;
-    }
-    bool ok = gliclass_infer_batch(session, &input_text, 1, &labels, &num_labels, 1, &out_results_tmp, &out_num_results_tmp, &out_num_results_size_tmp);
-
-    if (ok) {
-        *out_results = out_results_tmp[0];
-        *out_num_results = out_num_results_tmp[0];
-    }
-    free(out_results_tmp);
-    free(out_num_results_tmp);
-    return ok;
 }
 
 void gliclass_free_results(GLiClassResult* results, size_t num_results) {

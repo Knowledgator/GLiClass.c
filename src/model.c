@@ -28,15 +28,15 @@ ModelConfig* initialize_model_config(const char* model_config_path) {
  * @return A pointer to a dynamically allocated 1D int64_t array.
  *         The caller is responsible for freeing the allocated memory.
  */
-int64_t* flatten_int_array(int** data, size_t rows, size_t cols) {
-    int64_t* flat_data = (int64_t*)malloc(rows * cols * sizeof(int64_t));
+int64_t* flatten_int_array(int64_t** data, size_t rows, size_t cols) {
+    int64_t* flat_data = (int64_t*)calloc(rows * cols, sizeof(int64_t));
     if (!flat_data) {
         fprintf(stderr, "Error: Memory allocation for flat_data failed\n");
         return NULL;
     }
     for (size_t i = 0; i < rows; ++i) {
         for (size_t j = 0; j < cols; ++j) {
-            flat_data[i * cols + j] = (int64_t)data[i][j];
+            flat_data[i * cols + j] = data[i][j];
         }
     }
     return flat_data;
@@ -82,6 +82,29 @@ OrtValue* create_tensor(int64_t* data, size_t rows, size_t cols) {
     }
 
     return tensor;
+}
+
+/**
+ * Prepares input tensors for the ONNX model using tokenized input data.
+ * 
+ * @param tokenized A pointer to the TokenizedInputs structure containing the tokenized data.
+ * @param input_ids_tensor A pointer to the OrtValue that will store the input IDs tensor.
+ * @param attention_mask_tensor A pointer to the OrtValue that will store the attention mask tensor.
+ * @return 0 if successful, -1 if an error occurs during tensor preparation.
+ */
+int prepare_input_tensor(TokenizedInput* tokenized, OrtValue** input_ids_tensor, OrtValue** attention_mask_tensor) {
+    *input_ids_tensor = create_tensor(tokenized->input_ids, 1, tokenized->seq_length);
+    if (input_ids_tensor == NULL) {
+        fprintf(stderr, "Unable to allocate intput_ids_tensor");
+        return -1;
+    }
+    *attention_mask_tensor = create_tensor(tokenized->attention_mask, 1, tokenized->seq_length);
+    if (attention_mask_tensor == NULL) {
+        fprintf(stderr, "Unable to allocate attention_mask_tensor");
+        g_ort->ReleaseValue(input_ids_tensor);
+        return -1;
+    }
+    return 0;
 }
 
 /**
@@ -226,7 +249,7 @@ wchar_t* convert_path(const char* path) {
         return NULL;
     }
 
-    wchar_t *wide_str = malloc((len + 1) * sizeof(wchar_t));
+    wchar_t *wide_str = calloc((len + 1), sizeof(wchar_t));
     if(!wide_str) {
         fprintf(stderr, "Error: Unable to convert path to wchar_t*: %s\n", path);
         return NULL;
@@ -303,7 +326,7 @@ OrtSession* create_ort_session(OrtEnv* env, const char* model_path, int num_thre
 
     // Load the model and create a session
     #ifdef _WIN32
-    wchar_t* path = convert_path(model_path); 
+    wchar_t* path = convert_path(model_path);
     if (!path) {
         g_ort->ReleaseSessionOptions(session_options);
         return NULL;

@@ -14,17 +14,6 @@
     #define F_OK 0
 #endif
 
-
-/**
- * Tokenizes a batch of input texts using the provided tokenizer.
- *
- * @param tokenizer The tokenizer handle to use for tokenization.
- * @param inputs An array of input texts to be tokenized.
- * @param num_texts The number of input texts in the batch.
- * @param max_length The maximum length of tokens for each text. Sequences longer than this will be truncated.
- * @return A TokenizedInputs structure containing token IDs, token type IDs, and attention masks for the input texts.
- *         The caller is responsible for freeing the memory allocated for the returned structure.
- */
 TokenizedInputs tokenize_inputs(TokenizerHandle tokenizer, const char** inputs, size_t num_texts, size_t max_length) {
     TokenizerEncodeResult* results = (TokenizerEncodeResult*)calloc(num_texts, sizeof(TokenizerEncodeResult));
     if (!results) {
@@ -64,16 +53,16 @@ TokenizedInputs tokenize_inputs(TokenizerHandle tokenizer, const char** inputs, 
 
     // Mem alloc for tokenized data
     TokenizedInputs tokenized;
-    tokenized.input_ids = (int**)calloc(num_texts, sizeof(int*));
-    tokenized.token_type_ids = (int**)calloc(num_texts, sizeof(int*));
-    tokenized.attention_mask = (int**)calloc(num_texts, sizeof(int*));
+    tokenized.input_ids = (int64_t**)calloc(num_texts, sizeof(int64_t*));
+    tokenized.token_type_ids = (int64_t**)calloc(num_texts, sizeof(int64_t*));
+    tokenized.attention_mask = (int64_t**)calloc(num_texts, sizeof(int64_t*));
     tokenized.batch_size = num_texts;
     tokenized.seq_length = seq_length;
 
     for (size_t i = 0; i < num_texts; ++i) {
-        tokenized.input_ids[i] = (int*)calloc(seq_length, sizeof(int));
-        tokenized.token_type_ids[i] = (int*)calloc(seq_length, sizeof(int));
-        tokenized.attention_mask[i] = (int*)calloc(seq_length, sizeof(int));
+        tokenized.input_ids[i] = (int64_t*)calloc(seq_length, sizeof(int64_t));
+        tokenized.token_type_ids[i] = (int64_t*)calloc(seq_length, sizeof(int64_t));
+        tokenized.attention_mask[i] = (int64_t*)calloc(seq_length, sizeof(int64_t));
 
         for (size_t j = 0; j < seq_length; ++j) {
             if (j < results[i].len) {
@@ -99,11 +88,47 @@ TokenizedInputs tokenize_inputs(TokenizerHandle tokenizer, const char** inputs, 
     return tokenized;
 }
 
-/**
- * Prints the tokenized inputs including input IDs, token type IDs, and attention masks for each input text.
- *
- * @param tokenized Pointer to the TokenizedInputs structure to be printed.
- */
+TokenizedInput tokenize_input(TokenizerHandle tokenizer, const char* input, size_t max_length) {
+    TokenizerEncodeResult result;
+    size_t input_length = strlen(input);
+
+    int add_special_tokens = 1;
+    tokenizers_encode(tokenizer, input, input_length, add_special_tokens, &result);
+
+    size_t seq_length = 0; // This will be the length of the longest sequence after trimming.
+    if (result.len > max_length) {
+        seq_length = max_length;
+    } else {
+        seq_length = result.len;
+    }
+
+    // Mem alloc for tokenized data
+    TokenizedInput tokenized;
+    tokenized.input_ids = (int64_t*)calloc(seq_length, sizeof(int64_t));
+    tokenized.token_type_ids = (int64_t*)calloc(seq_length, sizeof(int64_t));
+    tokenized.attention_mask = (int64_t*)calloc(seq_length, sizeof(int64_t));
+    tokenized.seq_length = seq_length;
+
+    for (size_t j = 0; j < seq_length; ++j) {
+        if (j < result.len) {
+            if (j >= max_length) {
+                // If the length exceeds max_length, cut it off
+                break;
+            }
+            tokenized.input_ids[j] = result.token_ids[j];
+            tokenized.token_type_ids[j] = 0;  // In this case, for simplicity, we set it to 0
+            tokenized.attention_mask[j] = 1;  // 1 if token is exists
+        } else {
+            tokenized.input_ids[j] = 0;  // Padding
+            tokenized.token_type_ids[j] = 0;
+            tokenized.attention_mask[j] = 0;  // Padding токен не учитывается
+        }
+    }
+
+    tokenizers_free_encode_results(&result, 1);
+    return tokenized;
+}
+
 void print_tokenized_inputs(const TokenizedInputs* tokenized) {
     for (size_t i = 0; i < tokenized->batch_size; ++i) {
         printf("Input %zu:\n", i);
@@ -127,11 +152,6 @@ void print_tokenized_inputs(const TokenizedInputs* tokenized) {
     }
 }
 
-/**
- * Frees the memory allocated for the tokenized inputs including input IDs, token type IDs, and attention masks.
- *
- * @param tokenized Pointer to the TokenizedInputs structure to be freed.
- */
 void free_tokenized_inputs(TokenizedInputs* tokenized) {
     for (size_t i = 0; i < tokenized->batch_size; ++i) {
         free(tokenized->input_ids[i]);
@@ -143,13 +163,12 @@ void free_tokenized_inputs(TokenizedInputs* tokenized) {
     free(tokenized->attention_mask);
 }
 
-/**
- * Creates a tokenizer handle from a JSON configuration file.
- *
- * @param filepath The path to the JSON file containing tokenizer settings.
- * @return A TokenizerHandle initialized with the tokenizer settings from the file, or NULL if the file could not be read.
- *         The caller is responsible for freeing the tokenizer handle after use.
- */
+void free_tokenized_input(TokenizedInput* tokenized) {
+    free(tokenized->input_ids);
+    free(tokenized->token_type_ids);
+    free(tokenized->attention_mask);
+}
+
 TokenizerHandle create_tokenizer(const char* filepath) {
     // Check existence
     if (access(filepath, F_OK) != 0) {
