@@ -153,3 +153,17 @@ target_link_libraries(GLiClass
               cjson 
               ${ONNXRUNTIME_LIB} 
               OpenMP::OpenMP_C)
+
+# Install DLL and LIB files
+install(TARGETS GLiClass
+    RUNTIME DESTINATION bin  # DLL
+    LIBRARY DESTINATION lib  # Shared libraries
+    ARCHIVE DESTINATION lib  # Static libraries
+    PUBLIC_HEADER DESTINATION include  # Public headers
+)
+
+# Install headers inside include/ preserving directory structure
+install(DIRECTORY 
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/ 
+  DESTINATION include
+)
