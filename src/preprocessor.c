@@ -92,7 +92,7 @@ char* prepare_input(
     bool prompt_first,
     bool append_prefix_space
 ){
-    const char* label_prefix = append_prefix_space ? "<<LABEL>>" : "<<LABEL>> ";
+    const char* label_prefix = append_prefix_space ? "<<LABEL>> " : "<<LABEL>>";
     const char* sep_tag = "<<SEP>>";
     size_t total_len = strlen(text) + strlen(sep_tag) + 1; // +1 for null terminator
 
