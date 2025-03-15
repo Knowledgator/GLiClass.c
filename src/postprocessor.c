@@ -28,9 +28,8 @@ void process_multi_label(
     for (size_t j = 0; j < num_classes; j++) {
         float logit = output_data[j];
         float prob = sigmoid(logit);  // sigmoid function
-        
+
         if (prob < threshold) continue;
-        *out_num_results += 1;
 
         const char* label = NULL;
         if (j < num_labels) {
@@ -38,7 +37,8 @@ void process_multi_label(
         }
     
         if (!label) label = "[Unknown]";
-        out_results[j] = (GLiClassResult){(char*)label, prob};
+        out_results[*out_num_results] = (GLiClassResult){(char*)label, prob};
+        *out_num_results += 1;
     }
 }
 
@@ -102,7 +102,6 @@ void process_single_label(
         }
     }
     if (max_prob < threshold) return;
-    *out_num_results += 1;
 
     const char* label = NULL;
     if (max_idx < num_labels) {
@@ -111,6 +110,7 @@ void process_single_label(
 
     if (!label) label = "[Unknown]";
     out_results[0] = (GLiClassResult){(char*)label, max_prob};
+    *out_num_results += 1;
 }
 
 void process_single_label_batch(
