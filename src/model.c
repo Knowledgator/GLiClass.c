@@ -15,7 +15,9 @@
 
 ModelConfig* initialize_model_config(const char* model_config_path) {
     const char* json_string = read_file(model_config_path);
-    return parse_model_config_json(json_string);
+    ModelConfig* c = parse_model_config_json(json_string);
+    free((void*)json_string);
+    return c;
 }
 
 ////////////////////////////////////////////////////////// TO TENSORS //////////////////////////////////////////////////////
@@ -101,7 +103,7 @@ int prepare_input_tensor(TokenizedInput* tokenized, OrtValue** input_ids_tensor,
     *attention_mask_tensor = create_tensor(tokenized->attention_mask, 1, tokenized->seq_length);
     if (attention_mask_tensor == NULL) {
         fprintf(stderr, "Unable to allocate attention_mask_tensor");
-        g_ort->ReleaseValue(input_ids_tensor);
+        g_ort->ReleaseValue(*input_ids_tensor);
         return -1;
     }
     return 0;

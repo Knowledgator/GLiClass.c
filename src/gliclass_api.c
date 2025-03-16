@@ -207,6 +207,7 @@ bool gliclass_infer(
     g_ort->ReleaseValue(input_ids_tensor);
     g_ort->ReleaseValue(attention_mask_tensor);
     free_tokenized_input(&tokenized);
+    free(input);
 
     process_output_tensor(
         session,
@@ -333,10 +334,12 @@ void gliclass_free_results_batch(GLiClassResult** results, size_t* num_results, 
         free(results[i]);
     }
     free(results);
+    free(num_results);
 }
 
 void gliclass_cleanup(GLiClassSession* session) {
     if (!session) return;
+    if (session->model_config) free((void*)session->model_config);
     if (session->tokenizer) tokenizers_free(session->tokenizer);
     if (session->env) g_ort->ReleaseEnv(session->env);
     if (session->session) g_ort->ReleaseSession(session->session);
@@ -345,6 +348,7 @@ void gliclass_cleanup(GLiClassSession* session) {
 
 void gliclass_cleanup_custom_ort(GLiClassSession* session) {
     if (!session) return;
+    if (session->model_config) free((void*)session->model_config);
     if (session->tokenizer) tokenizers_free(session->tokenizer);
     free(session);
 }

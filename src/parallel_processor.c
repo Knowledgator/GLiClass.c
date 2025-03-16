@@ -105,4 +105,5 @@ void parallel_postprocess(
         // Free output tensor after processing
         g_ort->ReleaseValue(output_tensors[i]);
     }
+    free(output_tensors);
 }
