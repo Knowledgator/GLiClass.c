@@ -122,7 +122,7 @@ int main() {
         g_ort->ReleaseEnv(ort_env);
         return 1;
     }
-    ort_status = g_ort->CreateSession(env, path, session_options, &session);
+    ort_status = g_ort->CreateSession(ort_env, path, ort_session_options, &ort_session);
     free(path);
     #else
     ort_status = g_ort->CreateSession(ort_env, model_path, ort_session_options, &ort_session);
