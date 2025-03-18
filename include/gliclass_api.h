@@ -20,21 +20,11 @@ extern "C" {
 #include "onnxruntime_c_api.h"
 #include "tokenizer.h"
 
-extern const OrtApi* g_ort;
+GLICLASS_API extern const OrtApi* g_ort;
 
 typedef struct {
     bool prompt_first;
 } ModelConfig;
-
-// #ifndef CONFIGS_H
-// #define CONFIGS_H
-
-// #define BATCH_SIZE 8    // Number of texts in one batch for processing by the model
-// #define MAX_LENGTH 2048 // Maximum length of tokenized text (number of tokens)
-// #define THRESHOLD 0.5f  // Threshold for making a classification decision 
-// #define NUM_THREADS 8   // Number of threads for CPU (does not affect GPU performance)
-
-// #endif // CONFIGS_H
 
 typedef struct {
     size_t batch_size;
@@ -58,6 +48,10 @@ typedef struct {
     float score;   // Confidence score
 } GLiClassResult;
 
+#ifdef _WIN32
+GLICLASS_API wchar_t* convert_path(const char* path);
+#endif
+
 GLICLASS_API bool initialize_ort_api();
 
 /**
@@ -78,7 +72,7 @@ GLICLASS_API GLiClassSession* gliclass_init(
 // Initialize ORT environment
 GLICLASS_API OrtEnv* create_ort_env(const char* env_name);
 
-GLICLASS_API OrtSession* create_ort_session_with_openvino(OrtEnv* env, const char* model_path);
+GLICLASS_API OrtSession* create_ort_session_with_openvino(OrtEnv* env, const char* model_path, const int num_threads, const char* device_type);
 
 /**
  * Initialize GLiClass model and tokenizer

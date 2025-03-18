@@ -243,25 +243,6 @@ OrtValue* run_inference(OrtSession* session, OrtValue* input_ids_tensor, OrtValu
     return output_tensor;
 }
 
-#ifdef _WIN32
-wchar_t* convert_path(const char* path) {
-    size_t len = mbstowcs(NULL, path, 0);
-    if(len == (size_t)-1) {
-        fprintf(stderr, "Error: Unable to convert path to wchar_t*: %s\n", path);
-        return NULL;
-    }
-
-    wchar_t *wide_str = calloc((len + 1), sizeof(wchar_t));
-    if(!wide_str) {
-        fprintf(stderr, "Error: Unable to convert path to wchar_t*: %s\n", path);
-        return NULL;
-    }
-
-    mbstowcs(wide_str, path, len + 1);
-    return wide_str;
-}
-#endif
-
 /**
  * Creates and initializes an ONNX Runtime session from a model file.
  * 

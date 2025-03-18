@@ -16,6 +16,15 @@
     #include <windows.h>
 #endif
 
+#ifndef _WIN32
+    #include <unistd.h>
+#else
+    #include <io.h>
+
+    #define access _access
+    #define F_OK 0
+#endif
+
 // Mutex declarations
 #ifndef _WIN32
 pthread_mutex_t queue_mutex;
@@ -124,7 +133,33 @@ OrtEnv* create_ort_env(const char* env_name) {
     return env;
 }
 
-OrtSession* create_ort_session_with_openvino(OrtEnv* env, const char* model_path) {
+#ifdef _WIN32
+wchar_t* convert_path(const char* path) {
+    size_t len = mbstowcs(NULL, path, 0);
+    if(len == (size_t)-1) {
+        fprintf(stderr, "Error: Unable to convert path to wchar_t*: %s\n", path);
+        return NULL;
+    }
+
+    wchar_t *wide_str = calloc((len + 1), sizeof(wchar_t));
+    if(!wide_str) {
+        fprintf(stderr, "Error: Unable to convert path to wchar_t*: %s\n", path);
+        return NULL;
+    }
+
+    mbstowcs(wide_str, path, len + 1);
+    return wide_str;
+}
+#endif
+
+OrtSession* create_ort_session_with_openvino(OrtEnv* env, const char* model_path, int num_threads, const char* device_type) {
+     // Check existence
+     if (access(model_path, F_OK) != 0) {
+        fprintf(stderr, "Error: Model file not found at path: %s\n", model_path);
+        g_ort->ReleaseEnv(env);
+        return NULL;
+    }
+
     OrtSessionOptions* session_options = NULL;
     OrtStatus* status = g_ort->CreateSessionOptions(&session_options);
     if (status != NULL) {
@@ -134,8 +169,6 @@ OrtSession* create_ort_session_with_openvino(OrtEnv* env, const char* model_path
         g_ort->ReleaseEnv(env);
         return NULL;
     }
-
-    int num_threads = 8;
 
     // Set the number of threads for intra-op operations
     status = g_ort->SetIntraOpNumThreads(session_options, num_threads);
@@ -161,7 +194,7 @@ OrtSession* create_ort_session_with_openvino(OrtEnv* env, const char* model_path
 
     // Append OpenVINO EP
     const char* keys[] = {"device_type"};
-    const char* values[] = {"CPU"};
+    const char* values[] = {device_type};
 
     status = g_ort->SessionOptionsAppendExecutionProvider_OpenVINO_V2(
         session_options,
@@ -169,7 +202,6 @@ OrtSession* create_ort_session_with_openvino(OrtEnv* env, const char* model_path
         values,
         1 // Number of key-value pairs
     );
-
     if (status != NULL) {
         const char* msg = g_ort->GetErrorMessage(status);
         fprintf(stderr, "Failed to append OpenVINO EP: %s\n", msg);
@@ -191,7 +223,7 @@ OrtSession* create_ort_session_with_openvino(OrtEnv* env, const char* model_path
     }
 
     // Create session
-    status = g_ort->CreateSession(env, model_path, session_options, &session);
+    status = g_ort->CreateSession(env, path, session_options, &session);
     free(path);
     #else
     status = g_ort->CreateSession(env, model_path, session_options, &session);
