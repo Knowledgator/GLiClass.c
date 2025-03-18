@@ -75,6 +75,11 @@ GLICLASS_API GLiClassSession* gliclass_init(
     const size_t num_threads
 );
 
+// Initialize ORT environment
+GLICLASS_API OrtEnv* create_ort_env(const char* env_name);
+
+GLICLASS_API OrtSession* create_ort_session_with_openvino(OrtEnv* env, const char* model_path);
+
 /**
  * Initialize GLiClass model and tokenizer
  * @param model_path Path to ONNX model

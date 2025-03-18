@@ -111,6 +111,104 @@ GLiClassSession* gliclass_init(
     return session;
 }
 
+OrtEnv* create_ort_env(const char* env_name) {
+    OrtEnv* env = NULL;
+    OrtStatus* status = g_ort->CreateEnv(ORT_LOGGING_LEVEL_WARNING, env_name, &env);
+    if (status != NULL) {
+        const char* msg = g_ort->GetErrorMessage(status);
+        fprintf(stderr, "Failed to create ORT Env: %s\n", msg);
+        g_ort->ReleaseStatus(status);
+        return NULL;
+    }
+
+    return env;
+}
+
+OrtSession* create_ort_session_with_openvino(OrtEnv* env, const char* model_path) {
+    OrtSessionOptions* session_options = NULL;
+    OrtStatus* status = g_ort->CreateSessionOptions(&session_options);
+    if (status != NULL) {
+        const char* msg = g_ort->GetErrorMessage(status);
+        fprintf(stderr, "Failed to create ORT SessionOptions: %s\n", msg);
+        g_ort->ReleaseStatus(status);
+        g_ort->ReleaseEnv(env);
+        return NULL;
+    }
+
+    int num_threads = 8;
+
+    // Set the number of threads for intra-op operations
+    status = g_ort->SetIntraOpNumThreads(session_options, num_threads);
+    if (status != NULL) {
+        const char* msg = g_ort->GetErrorMessage(status);
+        fprintf(stderr, "Error: Failed to set intra-op threads: %s\n", msg);
+        g_ort->ReleaseStatus(status);
+        g_ort->ReleaseSessionOptions(session_options);
+        g_ort->ReleaseEnv(env);
+        return NULL;
+    }
+
+    // Set the number of threads for inter-op operations
+    status = g_ort->SetInterOpNumThreads(session_options, num_threads);
+    if (status != NULL) {
+        const char* msg = g_ort->GetErrorMessage(status);
+        fprintf(stderr, "Error: Failed to set inter-op threads: %s\n", msg);
+        g_ort->ReleaseStatus(status);
+        g_ort->ReleaseSessionOptions(session_options);
+        g_ort->ReleaseEnv(env);
+        return NULL;
+    }
+
+    // Append OpenVINO EP
+    const char* keys[] = {"device_type"};
+    const char* values[] = {"CPU"};
+
+    status = g_ort->SessionOptionsAppendExecutionProvider_OpenVINO_V2(
+        session_options,
+        keys,
+        values,
+        1 // Number of key-value pairs
+    );
+
+    if (status != NULL) {
+        const char* msg = g_ort->GetErrorMessage(status);
+        fprintf(stderr, "Failed to append OpenVINO EP: %s\n", msg);
+        g_ort->ReleaseStatus(status);
+        g_ort->ReleaseSessionOptions(session_options);
+        g_ort->ReleaseEnv(env);
+        return NULL;
+    }
+
+    OrtSession* session = NULL;    
+    // Load the model and create a session
+    #ifdef _WIN32
+    wchar_t* path = convert_path(model_path);
+    if (!path) {
+        g_ort->ReleaseStatus(status);
+        g_ort->ReleaseSessionOptions(session_options);
+        g_ort->ReleaseEnv(env);
+        return NULL;
+    }
+
+    // Create session
+    status = g_ort->CreateSession(env, model_path, session_options, &session);
+    free(path);
+    #else
+    status = g_ort->CreateSession(env, model_path, session_options, &session);
+    #endif
+    if (status != NULL) {
+        const char* msg = g_ort->GetErrorMessage(status);
+        fprintf(stderr, "Failed to create ORT Session: %s\n", msg);
+        g_ort->ReleaseStatus(status);
+        g_ort->ReleaseSessionOptions(session_options);
+        g_ort->ReleaseEnv(env);
+        return NULL;
+    }
+    g_ort->ReleaseSessionOptions(session_options); // Free session options after creating session
+
+    return session;
+}
+
 GLiClassSession* gliclass_init_custom_ort(
     const char* model_config_path,
     const char* tokenizer_path, 
@@ -148,7 +246,6 @@ GLiClassSession* gliclass_init_custom_ort(
     }
     return session;
 }
-
 
 // single process
 bool gliclass_infer(
