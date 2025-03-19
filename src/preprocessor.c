@@ -90,15 +90,17 @@ char* prepare_input(
     const char** labels,
     size_t num_labels,
     bool prompt_first,
-    bool append_prefix_space
+    bool add_prefix_space
 ){
-    const char* label_prefix = append_prefix_space ? "<<LABEL>> " : "<<LABEL>>";
-    const char* sep_tag = append_prefix_space ? "<<SEP>> " : "<<SEP>>";
-    size_t total_len = strlen(text) + strlen(sep_tag) + 1; // +1 for null terminator
+    const char* label_prefix = add_prefix_space ? "<<LABEL>> " : "<<LABEL>>";
+    const char* sep_tag = "<<SEP>>";
+    size_t total_len = (
+        strlen(text) + strlen(sep_tag) + (add_prefix_space ? 2 : 1) + num_labels*strlen(label_prefix)
+    ); // +1 for null terminator and +1 for space
 
     // size of result str
     for (size_t i = 0; i < num_labels; ++i) {
-        total_len += strlen(label_prefix) + strlen(labels[i]);
+        total_len += strlen(labels[i]);
     }    
 
     char* result = (char*)calloc(total_len, sizeof(char));
@@ -107,12 +109,13 @@ char* prepare_input(
         return NULL;
     }
 
-    // result[0] = '\0'; // clear memory before use
     if (prompt_first) {
         append_labels(label_prefix, labels, num_labels, result);
         strcat(result, sep_tag);
+        if (add_prefix_space) strcat(result, " ");
         strcat(result, text);
     } else {
+        if (add_prefix_space) strcat(result, " ");
         strcat(result, text);
         append_labels(label_prefix, labels, num_labels, result);
         strcat(result, sep_tag);
