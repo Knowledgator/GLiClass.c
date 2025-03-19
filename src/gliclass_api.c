@@ -404,14 +404,22 @@ bool gliclass_infer(
         &attention_mask_tensor
     );
 
-
-    #ifdef USE_CUDA // GPU
-    pthread_mutex_lock(&queue_mutex);
-    OrtValue* output_tensor = run_inference(session->session, input_ids_tensor, attention_mask_tensor);
-    pthread_mutex_unlock(&queue_mutex);
-    #else
-    OrtValue* output_tensor = run_inference(session->session, input_ids_tensor, attention_mask_tensor);
-    #endif
+    OrtValue* output_tensor;
+    if (session->use_mutex) {
+        #ifndef _WIN32
+        pthread_mutex_lock(&queue_mutex);
+        #else
+        WaitForSingleObject(queue_mutex, INFINITE); 
+        #endif
+        output_tensor = run_inference(session->session, input_ids_tensor, attention_mask_tensor);
+        #ifndef _WIN32
+        pthread_mutex_unlock(&queue_mutex);
+        #else
+        ReleaseMutex(queue_mutex);
+        #endif
+    } else {
+        output_tensor = run_inference(session->session, input_ids_tensor, attention_mask_tensor);
+    }
     g_ort->ReleaseValue(input_ids_tensor);
     g_ort->ReleaseValue(attention_mask_tensor);
     free_tokenized_input(&tokenized);
@@ -426,12 +434,6 @@ bool gliclass_infer(
         *out_results,
         out_num_results
     );
-
-    #ifndef _WIN32
-	pthread_mutex_destroy(&queue_mutex);
-    #else
-	CloseHandle(queue_mutex);
-    #endif
     return true;
 }
 
@@ -490,9 +492,17 @@ bool gliclass_infer_batch(
     #pragma omp parallel for schedule(dynamic)
     for (size_t i = 0; i < num_batches; i++) {
         if (session->use_mutex) {
+            #ifndef _WIN32
             pthread_mutex_lock(&queue_mutex);
+            #else
+            WaitForSingleObject(queue_mutex, INFINITE); 
+            #endif
             output_tensors[i] = run_inference(session->session, input_ids_tensors[i], attention_mask_tensors[i]);
+            #ifndef _WIN32
             pthread_mutex_unlock(&queue_mutex);
+            #else
+            ReleaseMutex(queue_mutex);
+            #endif
         } else {
             output_tensors[i] = run_inference(session->session, input_ids_tensors[i], attention_mask_tensors[i]);
         }
