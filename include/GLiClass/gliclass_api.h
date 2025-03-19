@@ -39,7 +39,7 @@ typedef struct GLiClassSession {
     TokenizerHandle tokenizer;
     OrtSession* session;
     OrtEnv* env;
-    const bool use_mutex;
+    bool use_mutex;
 } GLiClassSession;
 
 // Struct to hold inference results
@@ -70,7 +70,8 @@ GLICLASS_API GLiClassSession* gliclass_init(
     const char* model_path, 
     const char* model_config_path,
     const char* tokenizer_path,
-    const size_t num_threads
+    const size_t num_threads,
+    const bool use_mutex
 );
 
 // Initialize ORT environment
@@ -104,6 +105,7 @@ GLICLASS_API OrtSession* gliclass_create_ort_session_cuda(
 GLICLASS_API GLiClassSession* gliclass_init_custom_ort(
     const char* model_config_path,
     const char* tokenizer_path,
+    const bool use_mutex,
     OrtSession* session
 );
 

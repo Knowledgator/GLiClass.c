@@ -68,6 +68,7 @@ int main() {
     GLiClassSession* session = gliclass_init_custom_ort(
         model_config_path,
         tokenizer_path,
+        false, // use mutex
         ort_session
     );
 
@@ -92,7 +93,7 @@ int main() {
     fprintf(stdout, "Elapsed: %f s\n", time);
 
     if (!ok) {
-        fprintf(stderr, "Errors occur during inference!");
+        fprintf(stderr, "Errors occured during inference!");
         gliclass_cleanup(session);
         return 1;
     }

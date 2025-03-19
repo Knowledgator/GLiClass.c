@@ -11,6 +11,8 @@ endif()
 
 set(GLICLASS_ROOTDIR ../)
 
+set(BUILD_TARGET "CPU" CACHE STRING "Choose the build target: CPU or GPU")
+
 add_subdirectory(${GLICLASS_ROOTDIR} GLiClass)
 
 add_executable(inference_multi_label_batch inference_multi_label_batch.c)
@@ -53,3 +55,9 @@ else()
 endif()
 target_include_directories(inference_openvino PRIVATE ${GLICLASS_ROOTDIR}/include)
 target_link_libraries(inference_openvino GLiClass)
+
+if(BUILD_TARGET STREQUAL "GPU")
+    add_executable(inference_cuda inference_cuda.c)
+    target_include_directories(inference_cuda PRIVATE ${GLICLASS_ROOTDIR}/include)
+    target_link_libraries(inference_cuda GLiClass)
+endif()

@@ -81,7 +81,8 @@ GLiClassSession* gliclass_init(
     const char* model_path, 
     const char* model_config_path,
     const char* tokenizer_path,
-    const size_t num_threads
+    const size_t num_threads,
+    const bool use_mutex
 ) {
     // Initializes the ONNX Runtime API
     if (!gliclass_initialize_ort_api()) return false;
@@ -94,6 +95,16 @@ GLiClassSession* gliclass_init(
     GLiClassSession* session = calloc(1, sizeof(GLiClassSession));
     if (!session) return NULL;
 
+    session->use_mutex = use_mutex;
+    if (session->use_mutex) {
+        // Initialize queue mutex
+        #ifndef _WIN32
+        pthread_mutex_init(&queue_mutex, NULL);
+        #else
+        queue_mutex = CreateMutex(NULL, FALSE, NULL);
+        #endif
+    }
+
     // Initialize the model config
     session->model_config = initialize_model_config(model_config_path);
     if (!session->model_config) {
@@ -102,7 +113,7 @@ GLiClassSession* gliclass_init(
     }
 
     // Initialize ONNX environment
-    session->env = initialize_ort_environment();
+    session->env = gliclass_create_ort_env("GLiClass");
     if (!session->env) {
         gliclass_cleanup(session);
         return NULL;
@@ -310,6 +321,7 @@ OrtSession* gliclass_create_ort_session_openvino(OrtEnv* env, const char* model_
 GLiClassSession* gliclass_init_custom_ort(
     const char* model_config_path,
     const char* tokenizer_path, 
+    const bool use_mutex,
     OrtSession* ort_session
 ) {
     if (!g_ort || !ort_session) {
@@ -322,6 +334,16 @@ GLiClassSession* gliclass_init_custom_ort(
 
     // Initialize ONNX session (model loading)
     session->session = ort_session;
+
+    session->use_mutex = use_mutex;
+    if (session->use_mutex) {
+        // Initialize queue mutex
+        #ifndef _WIN32
+        pthread_mutex_init(&queue_mutex, NULL);
+        #else
+        queue_mutex = CreateMutex(NULL, FALSE, NULL);
+        #endif
+    }
 
     // Initialize the model config
     session->model_config = initialize_model_config(model_config_path);
@@ -349,14 +371,10 @@ bool gliclass_infer(
     GLiClassResult* out_results[],
     size_t* out_num_results
 ) {
-    if (!session || !input_text || !labels || num_labels == 0) return false;
-
-    // Initialize queue mutex
-    #ifndef _WIN32
-    pthread_mutex_init(&queue_mutex, NULL);
-    #else
-    queue_mutex = CreateMutex(NULL, FALSE, NULL);
-    #endif
+    if (!session || !input_text || !labels || num_labels == 0) {
+        fprintf(stderr, "Inputs have invalid value!");
+        return false;
+    }
 
     // Allocate output array for results
     *out_num_results = 0;
@@ -433,14 +451,10 @@ bool gliclass_infer_batch(
     if (
         !session || !input_texts || !labels || !num_labels || num_labels_size == 0 
         || (num_labels_size != 1 && num_labels_size != num_texts)
-    ) return false;
-
-    // Initialize queue mutex
-    #ifndef _WIN32
-    pthread_mutex_init(&queue_mutex, NULL);
-    #else
-    queue_mutex = CreateMutex(NULL, FALSE, NULL);
-    #endif
+    ) {
+        fprintf(stderr, "Inputs have invalid value!");
+        return false;
+    }
 
     *out_num_results_size = num_texts;
     *out_results = (GLiClassResult**)calloc(*out_num_results_size, sizeof(GLiClassResult*));
@@ -475,13 +489,13 @@ bool gliclass_infer_batch(
     // Inference stage
     #pragma omp parallel for schedule(dynamic)
     for (size_t i = 0; i < num_batches; i++) {
-        #ifdef USE_CUDA // GPU
-        pthread_mutex_lock(&queue_mutex);
-        output_tensors[i] = run_inference(session->session, input_ids_tensors[i], attention_mask_tensors[i]);
-        pthread_mutex_unlock(&queue_mutex);
-        #else
-        output_tensors[i] = run_inference(session->session, input_ids_tensors[i], attention_mask_tensors[i]);
-        #endif
+        if (session->use_mutex) {
+            pthread_mutex_lock(&queue_mutex);
+            output_tensors[i] = run_inference(session->session, input_ids_tensors[i], attention_mask_tensors[i]);
+            pthread_mutex_unlock(&queue_mutex);
+        } else {
+            output_tensors[i] = run_inference(session->session, input_ids_tensors[i], attention_mask_tensors[i]);
+        }
         g_ort->ReleaseValue(input_ids_tensors[i]);
         g_ort->ReleaseValue(attention_mask_tensors[i]);
     }
@@ -503,11 +517,7 @@ bool gliclass_infer_batch(
         *out_num_results
     );
 
-    #ifndef _WIN32
-	pthread_mutex_destroy(&queue_mutex);
-    #else
-	CloseHandle(queue_mutex);
-    #endif
+
     return true;
 }
 
@@ -530,6 +540,13 @@ void gliclass_free_results_batch(GLiClassResult** results, size_t* num_results, 
 
 void gliclass_cleanup(GLiClassSession* session) {
     if (!session) return;
+    if (session->use_mutex) {
+        #ifndef _WIN32
+        pthread_mutex_destroy(&queue_mutex);
+        #else
+        CloseHandle(queue_mutex);
+        #endif
+    }
     if (session->model_config) free((void*)session->model_config);
     if (session->tokenizer) tokenizers_free(session->tokenizer);
     if (session->env) g_ort->ReleaseEnv(session->env);
@@ -540,6 +557,13 @@ void gliclass_cleanup(GLiClassSession* session) {
 
 void gliclass_cleanup_custom_ort(GLiClassSession* session) {
     if (!session) return;
+    if (session->use_mutex) {
+        #ifndef _WIN32
+        pthread_mutex_destroy(&queue_mutex);
+        #else
+        CloseHandle(queue_mutex);
+        #endif
+    }
     if (session->model_config) free((void*)session->model_config);
     if (session->tokenizer) tokenizers_free(session->tokenizer);
     free(session);

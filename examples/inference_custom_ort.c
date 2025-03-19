@@ -139,6 +139,7 @@ int main() {
     GLiClassSession* session = gliclass_init_custom_ort(
         model_config_path,
         tokenizer_path,
+        false,
         ort_session
     );
 

@@ -15,7 +15,8 @@ int main() {
         model_path,
         model_config_path,
         tokenizer_path,
-        8
+        8,
+        false
     );
 
     const char* texts[] = {

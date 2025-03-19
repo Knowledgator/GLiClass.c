@@ -69,7 +69,8 @@ int main() {
         model_path,
         model_config_path,
         tokenizer_path,
-        8 // Number of threads
+        8, // Number of threads
+        false
     );
     if (!session) {
         fprintf(stderr, "Failed to initialize GLiClass session\n");

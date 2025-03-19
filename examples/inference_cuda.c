@@ -1,23 +1,37 @@
 #include <stdio.h>
+#include "onnxruntime_c_api.h"
 #include "GLiClass/gliclass_api.h"
+#include <time.h>
 
 int main() {
     const char* model_path = "./onnx/model.onnx";
     const char* model_config_path = "./onnx/config.json";
     const char* tokenizer_path = "./tokenizer/tokenizer.json";
 
+    int num_threads = 8;
+    int device_id = 0;
     GLiClassInferenceConfig config;
     gliclass_create_inference_config(
         8, 2048, 0.5, "multi-label", true, &config
     );
 
+    // Initializes the ONNX Runtime API
+    if (!gliclass_initialize_ort_api()) return false;
+
+    OrtEnv* ort_env = gliclass_create_ort_env("GLiClass");
+    OrtSession* ort_session = gliclass_create_ort_session_cuda(ort_env, model_path, num_threads, device_id);
+
+    if (!ort_env || !ort_session) {
+        fprintf(stderr, "ERROR WITH ORT!");
+        return 1;
+    }
+
     // Initialize session (model setup)
-    GLiClassSession* session = gliclass_init(
-        model_path,
+    GLiClassSession* session = gliclass_init_custom_ort(
         model_config_path,
         tokenizer_path,
-        8,
-        false
+        true, // use mutex lock for inference
+        ort_session
     );
 
     const char* texts[] = {
@@ -41,6 +55,7 @@ int main() {
     size_t* results_shape = NULL;
     size_t results_shape_size = 0;
     
+    double time = (double)clock() / CLOCKS_PER_SEC;
     bool ok = gliclass_infer_batch(
         session, 
         &config,
@@ -53,9 +68,11 @@ int main() {
         &results_shape,
         &results_shape_size
     );
+    time = (double)clock() / CLOCKS_PER_SEC - time;
+    fprintf(stdout, "Elapsed: %f s\n", time);
 
     if (!ok) {
-        fprintf(stderr, "Errors occur during inference!");
+        fprintf(stderr, "Errors occured during inference!");
         gliclass_cleanup(session);
         return 1;
     }
