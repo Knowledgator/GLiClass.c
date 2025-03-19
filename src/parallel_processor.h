@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include "onnxruntime_c_api.h"
-#include "gliclass_api.h"
+#include "GLiClass/gliclass_api.h"
 #include "tokenizers_c.h"
 
 /**
@@ -25,6 +25,7 @@
  */
 void parallel_preprocess(
     GLiClassSession* session,
+    const GLiClassInferenceConfig* config,
     const size_t num_batches,
     const char* texts[], 
     const size_t num_texts,
@@ -54,6 +55,7 @@ void parallel_preprocess(
  */
 void parallel_postprocess(
     GLiClassSession* session,
+    const GLiClassInferenceConfig* config,
     OrtValue** output_tensors, 
     const size_t num_batches,
     const size_t num_texts,

@@ -5,7 +5,6 @@
 #include <string.h>
 #include <stdbool.h>
 #include "cJSON.h"
-#include "gliclass_api.h"
 
 /**
  * Reads the entire content of a file and returns it as a string.
@@ -45,8 +44,8 @@ char* read_file(const char* filename) {
  * This function dynamically allocates memory for texts, labels, and related data. 
  * It is the caller's responsibility to free the allocated memory.
  */
-ModelConfig* parse_model_config_json(const char* json_string) {
-    ModelConfig* config = (ModelConfig*)calloc(1, sizeof(ModelConfig));
+GLiClassModelConfig* parse_model_config_json(const char* json_string) {
+    GLiClassModelConfig* config = (GLiClassModelConfig*)calloc(1, sizeof(GLiClassModelConfig));
     if (!config) {
         return NULL;
     }

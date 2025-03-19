@@ -29,9 +29,9 @@ add_executable(inference_multi_label_single_repeat inference_multi_label_single_
 target_include_directories(inference_multi_label_single_repeat PRIVATE ${GLICLASS_ROOTDIR}/include)
 target_link_libraries(inference_multi_label_single_repeat GLiClass)
 
-add_executable(inference_multi_lable_single_config inference_multi_lable_single_config.c)
-target_include_directories(inference_multi_lable_single_config PRIVATE ${GLICLASS_ROOTDIR}/include)
-target_link_libraries(inference_multi_lable_single_config GLiClass)
+add_executable(inference_multi_label_single_config inference_multi_label_single_config.c)
+target_include_directories(inference_multi_label_single_config PRIVATE ${GLICLASS_ROOTDIR}/include)
+target_link_libraries(inference_multi_label_single_config GLiClass)
 
 add_executable(inference_single_label_single inference_single_label_single.c)
 target_include_directories(inference_single_label_single PRIVATE ${GLICLASS_ROOTDIR}/include)
@@ -49,7 +49,7 @@ target_link_libraries(inference_openvino "C:/Program Files (x86)/Intel/openvino_
 else()
     target_include_directories(inference_openvino PUBLIC "/opt/intel/openvino_2024/runtime/include")
     target_link_directories(inference_openvino PUBLIC "/opt/intel/openvino_2024/runtime/lib/intel64")
-    target_link_libraries(inference_openvino "/opt/intel/openvino_2024/runtime/lib/intel64/openvino_c.lib")
+    target_link_libraries(inference_openvino "/opt/intel/openvino_2024/runtime/lib/intel64/libopenvino_c.so")
 endif()
 target_include_directories(inference_openvino PRIVATE ${GLICLASS_ROOTDIR}/include)
 target_link_libraries(inference_openvino GLiClass)

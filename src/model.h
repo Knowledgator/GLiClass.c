@@ -3,10 +3,10 @@
 
 #include <stddef.h>
 #include "onnxruntime_c_api.h"
-#include "gliclass_api.h"
+#include "GLiClass/gliclass_api.h"
 #include "tokenizer.h"
 
-ModelConfig* initialize_model_config(const char* model_config_path);
+GLiClassModelConfig* initialize_model_config(const char* model_config_path);
 
 ///// TO TENSORS /////
 int64_t* flatten_int_array(int64_t** data, size_t rows, size_t cols);

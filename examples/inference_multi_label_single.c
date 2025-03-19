@@ -1,20 +1,20 @@
 #include <stdio.h>
-#include "gliclass_api.h"
+#include "GLiClass/gliclass_api.h"
 
 int main() {
     const char* model_path = "./onnx/model.onnx";
     const char* model_config_path = "./onnx/config.json";
     const char* tokenizer_path = "./tokenizer/tokenizer.json";
-    InferenceConfig config = {
-        8, 2048, 0.5, "multi-label", false
-    };
+    GLiClassInferenceConfig config;
+    gliclass_create_inference_config(
+        8, 2048, 0.5, "multi-label", true, &config
+    );
 
     // Initialize session (model setup)
     GLiClassSession* session = gliclass_init(
         model_path,
         model_config_path,
         tokenizer_path,
-        &config,
         8
     );
 
@@ -30,7 +30,8 @@ int main() {
     size_t num_results = 0;
     
     bool ok = gliclass_infer(
-        session, 
+        session,
+        &config,
         text, 
         labels, 
         num_labels, 

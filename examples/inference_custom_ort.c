@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include "onnxruntime_c_api.h"
-#include "gliclass_api.h"
+#include "GLiClass/gliclass_api.h"
 #ifndef _WIN32
     #include <unistd.h>
 #else
@@ -37,12 +37,11 @@ int main() {
 
     size_t num_threads = 8;
 
-    InferenceConfig config = {
-        8, 2048, 0.5, "multi-label", false
-    };
+    GLiClassInferenceConfig config; 
+    gliclass_create_inference_config(8, 2048, 0.5, "multi-label", false, &config);
 
     // Initializes the ONNX Runtime API
-    if (!initialize_ort_api()) return false;
+    if (!gliclass_initialize_ort_api()) return false;
 
     OrtEnv* ort_env = NULL;
     OrtSessionOptions* ort_session_options = NULL;
@@ -140,7 +139,6 @@ int main() {
     GLiClassSession* session = gliclass_init_custom_ort(
         model_config_path,
         tokenizer_path,
-        &config,
         ort_session
     );
 
@@ -153,9 +151,10 @@ int main() {
     
     bool ok = gliclass_infer(
         session, 
+        &config,
         text, 
         labels, 
-        num_labels, 
+        num_labels,
         &results,
         &num_results
     );

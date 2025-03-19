@@ -3,10 +3,11 @@
 
 #include <stddef.h>
 #include <stdbool.h>
-#include "gliclass_api.h"
+#include "GLiClass/gliclass_api.h"
 
 const char** prepare_inputs(
     GLiClassSession* session,
+    const GLiClassInferenceConfig* config,
     const char* texts[], 
     const size_t num_texts,
     const char** labels[], 

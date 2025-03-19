@@ -13,9 +13,9 @@
 
 #include "read_data.h"
 
-ModelConfig* initialize_model_config(const char* model_config_path) {
+GLiClassModelConfig* initialize_model_config(const char* model_config_path) {
     const char* json_string = read_file(model_config_path);
-    ModelConfig* c = parse_model_config_json(json_string);
+    GLiClassModelConfig* c = parse_model_config_json(json_string);
     free((void*)json_string);
     return c;
 }

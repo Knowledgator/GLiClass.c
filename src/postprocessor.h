@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 #include "onnxruntime_c_api.h"
-#include "gliclass_api.h"
+#include "GLiClass/gliclass_api.h"
 
 float sigmoid(float x);
 
@@ -18,6 +18,7 @@ float sigmoid(float x);
  */
 void process_output_tensor(
     GLiClassSession* session,
+    const GLiClassInferenceConfig* config,
     OrtValue* output_tensor,
     const char* labels[],
     const size_t num_labels,
@@ -39,6 +40,7 @@ void process_output_tensor(
  */
 void process_output_tensor_batch(
     GLiClassSession* session,
+    const GLiClassInferenceConfig* config,
     OrtValue* output_tensor, 
     const char** labels[],
     const size_t* num_labels,

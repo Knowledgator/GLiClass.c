@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include "onnxruntime_c_api.h"
-#include "gliclass_api.h"
+#include "GLiClass/gliclass_api.h"
 #include <openvino/c/openvino.h>
 #include <openvino/c/ov_core.h>
 #include <time.h>
@@ -45,18 +45,19 @@ int main() {
 
     int num_threads = 8;
 
-    InferenceConfig config = {
-        8, 2048, 0.5, "multi-label", false
-    };
+    GLiClassInferenceConfig config;
+    gliclass_create_inference_config(
+        8, 2048, 0.5, "multi-label", true, &config
+    );
 
     // Initializes the ONNX Runtime API
-    if (!initialize_ort_api()) return false;
+    if (!gliclass_initialize_ort_api()) return false;
 
     fprintf(stderr, "OK!");
     fflush(stderr);
 
-    OrtEnv* ort_env = create_ort_env("GLiClass");
-    OrtSession* ort_session = create_ort_session_with_openvino(ort_env, model_path, num_threads, "GPU");
+    OrtEnv* ort_env = gliclass_create_ort_env("GLiClass");
+    OrtSession* ort_session = gliclass_create_ort_session_openvino(ort_env, model_path, num_threads, "GPU");
 
     if (!ort_env || !ort_session) {
         fprintf(stderr, "ERROR WITH ORT!");
@@ -67,7 +68,6 @@ int main() {
     GLiClassSession* session = gliclass_init_custom_ort(
         model_config_path,
         tokenizer_path,
-        &config,
         ort_session
     );
 
@@ -80,7 +80,8 @@ int main() {
     
     double time = (double)clock() / CLOCKS_PER_SEC;
     bool ok = gliclass_infer(
-        session, 
+        session,
+        &config,
         text, 
         labels, 
         num_labels, 

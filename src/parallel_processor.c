@@ -16,6 +16,7 @@ size_t get_batch_size(
 
 void parallel_preprocess(
     GLiClassSession* session,
+    const GLiClassInferenceConfig* config,
     const size_t num_batches,
     const char* texts[], 
     const size_t num_texts,
@@ -28,7 +29,7 @@ void parallel_preprocess(
     #pragma omp parallel for schedule(dynamic)
     for (size_t i = 0; i < num_batches; i++) {
         const size_t batch_size = get_batch_size(
-            i, num_batches, num_texts, session->inference_config->batch_size
+            i, num_batches, num_texts, config->batch_size
         );
 
         // Prepare input data
@@ -40,6 +41,7 @@ void parallel_preprocess(
         // Prepare tokens
         const char** prepared_inputs = prepare_inputs(
             session,
+            config,
             batch_texts,
             batch_size,
             batch_labels, 
@@ -50,14 +52,14 @@ void parallel_preprocess(
             session->tokenizer, 
             (const char**)prepared_inputs, 
             batch_size,
-            session->inference_config->max_length
+            config->max_length
         );
 
         // Prepare input tensors
         prepare_input_tensors(
             &tokenized,
-            &input_ids_tensors[i / session->inference_config->batch_size], 
-            &attention_mask_tensors[i / session->inference_config->batch_size]
+            &input_ids_tensors[i / config->batch_size], 
+            &attention_mask_tensors[i / config->batch_size]
         );
 
         // Clean up memory
@@ -68,6 +70,7 @@ void parallel_preprocess(
 
 void parallel_postprocess(
     GLiClassSession* session,
+    const GLiClassInferenceConfig* config,
     OrtValue** output_tensors, 
     const size_t num_batches,
     const size_t num_texts,
@@ -81,18 +84,19 @@ void parallel_postprocess(
     #pragma omp parallel for schedule(dynamic)
     for (size_t i = 0; i < num_batches; i++) {
         const size_t batch_size = get_batch_size(
-            i, num_batches, num_texts, session->inference_config->batch_size
+            i, num_batches, num_texts, config->batch_size
         );
         const char*** batch_labels = (
-            same_labels ? labels : (labels + i*session->inference_config->batch_size)
+            same_labels ? labels : (labels + i*config->batch_size)
         );
         const size_t* batch_num_labels = (
-            same_labels ? num_labels : (num_labels + i*session->inference_config->batch_size)
+            same_labels ? num_labels : (num_labels + i*config->batch_size)
         );
         const size_t batch_num_labels_size = same_labels ? num_labels_size: batch_size;
 
         process_output_tensor_batch(
             session,
+            config,
             output_tensors[i], 
             batch_labels, 
             batch_num_labels, 

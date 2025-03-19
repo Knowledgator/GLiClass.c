@@ -1,23 +1,15 @@
 #include <stdio.h>
-#include "gliclass_api.h"
+#include "GLiClass/gliclass_api.h"
 
 // Function to run a single inference with a given config
-static void run_inference_with_config(InferenceConfig config, const char* model_path, const char* model_config_path, const char* tokenizer_path, const char* text, const char* labels[], size_t num_labels) {
-    printf("\nRunning inference with threshold: %.3f\n", config.threshold);
-
-    // Initialize session
-    GLiClassSession* session = gliclass_init(
-        model_path,
-        model_config_path,
-        tokenizer_path,
-        &config,
-        8 // Number of threads
-    );
-
-    if (!session) {
-        fprintf(stderr, "Failed to initialize GLiClass session\n");
-        return;
-    }
+static bool run_inference_with_config(
+    GLiClassSession* session,
+    GLiClassInferenceConfig* config, 
+    const char* text, 
+    const char* labels[], 
+    size_t num_labels
+) {
+    printf("\nRunning inference with threshold: %.3f\n", config->threshold);
 
     // Run inference
     GLiClassResult* results = NULL;
@@ -25,6 +17,7 @@ static void run_inference_with_config(InferenceConfig config, const char* model_
 
     bool ok = gliclass_infer(
         session,
+        config,
         text,
         labels,
         num_labels,
@@ -34,8 +27,7 @@ static void run_inference_with_config(InferenceConfig config, const char* model_
 
     if (!ok) {
         fprintf(stderr, "Errors occurred during inference!\n");
-        gliclass_cleanup(session);
-        return;
+        return ok;
     }
 
     // Output results
@@ -46,7 +38,7 @@ static void run_inference_with_config(InferenceConfig config, const char* model_
 
     // Cleanup
     gliclass_free_results(results, num_results);
-    gliclass_cleanup(session);
+    return ok;
 }
 
 
@@ -72,8 +64,20 @@ int main() {
 
     const size_t num_labels = 10;
 
+    // Initialize session
+    GLiClassSession* session = gliclass_init(
+        model_path,
+        model_config_path,
+        tokenizer_path,
+        8 // Number of threads
+    );
+    if (!session) {
+        fprintf(stderr, "Failed to initialize GLiClass session\n");
+        return 1;
+    }
+
     // Array of different InferenceConfig settings to test
-    InferenceConfig configs[] = {
+    GLiClassInferenceConfig configs[] = {
         {8, 2048, 0.5, "multi-label", false},
         {8, 2048, 0.1, "multi-label", false},
         {8, 2048, 0.01, "multi-label", false}
@@ -83,8 +87,12 @@ int main() {
 
     // Loop through each config and run inference
     for (size_t i = 0; i < num_configs; ++i) {
-        run_inference_with_config(configs[i], model_path, model_config_path, tokenizer_path, text, labels, num_labels);
+        bool ok = run_inference_with_config(session, &configs[i], text, labels, num_labels);
+        if (!ok) {
+            gliclass_cleanup(session);
+            return 1;
+        }
     }
-
+    gliclass_cleanup(session);
     return 0;
 }

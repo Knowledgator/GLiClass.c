@@ -155,6 +155,7 @@ void process_single_label_batch(
 
 void process_output_tensor(
     GLiClassSession* session,
+    const GLiClassInferenceConfig* config,
     OrtValue* output_tensor,
     const char* labels[],
     const size_t num_labels,
@@ -220,17 +221,17 @@ void process_output_tensor(
 
     int64_t num_classes = dims[1];
     size_t text_id = 0;
-    if (strcmp(session->inference_config->classification_type, "multi-label") == 0) {    
+    if (strcmp(config->classification_type, "multi-label") == 0) {    
         process_multi_label(
             output_data,
             num_classes,
             labels,
             num_labels,
-            session->inference_config->threshold,
+            config->threshold,
             out_results,
             out_num_results
         );
-    } else if (strcmp(session->inference_config->classification_type, "single-label") == 0){
+    } else if (strcmp(config->classification_type, "single-label") == 0){
         process_single_label(
             output_data,
             num_classes,
@@ -249,6 +250,7 @@ void process_output_tensor(
 
 void process_output_tensor_batch(
     GLiClassSession* session,
+    const GLiClassInferenceConfig* config,
     OrtValue* output_tensor, 
     const char** labels[],
     const size_t num_labels[],
@@ -317,8 +319,8 @@ void process_output_tensor_batch(
     // Process logits
     int64_t batch_size = dims[0];
     int64_t num_classes = dims[1];
-    size_t text_id = batch_id * session->inference_config->batch_size;
-    if (strcmp(session->inference_config->classification_type, "multi-label") == 0) {    
+    size_t text_id = batch_id * config->batch_size;
+    if (strcmp(config->classification_type, "multi-label") == 0) {    
         process_multi_label_batch(
             output_data,
             batch_size,
@@ -326,12 +328,12 @@ void process_output_tensor_batch(
             labels,
             num_labels,
             num_labels_size,
-            session->inference_config->threshold,
+            config->threshold,
             text_id,
             out_results,
             out_num_results
         );
-    } else if (strcmp(session->inference_config->classification_type, "single-label") == 0){
+    } else if (strcmp(config->classification_type, "single-label") == 0){
         process_single_label_batch(
             output_data,
             batch_size,
@@ -339,7 +341,7 @@ void process_output_tensor_batch(
             labels,
             num_labels,
             num_labels_size,
-            session->inference_config->threshold,
+            config->threshold,
             text_id,
             out_results,
             out_num_results

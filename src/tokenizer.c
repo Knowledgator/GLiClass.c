@@ -134,19 +134,19 @@ void print_tokenized_inputs(const TokenizedInputs* tokenized) {
         printf("Input %zu:\n", i);
         printf("input_ids: [");
         for (size_t j = 0; j < tokenized->seq_length; ++j) {
-            printf("%d, ", tokenized->input_ids[i][j]);
+            printf("%ld, ", tokenized->input_ids[i][j]);
         }
         printf("]\n");
 
         printf("token_type_ids: [");
         for (size_t j = 0; j < tokenized->seq_length; ++j) {
-            printf("%d, ", tokenized->token_type_ids[i][j]);
+            printf("%ld, ", tokenized->token_type_ids[i][j]);
         }
         printf("]\n");
 
         printf("attention_mask: [");
         for (size_t j = 0; j < tokenized->seq_length; ++j) {
-            printf("%d, ", tokenized->attention_mask[i][j]);
+            printf("%ld, ", tokenized->attention_mask[i][j]);
         }
         printf("]\n");        
     }

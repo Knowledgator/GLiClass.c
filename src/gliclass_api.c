@@ -1,4 +1,4 @@
-#include "gliclass_api.h"
+#include "GLiClass/gliclass_api.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -34,45 +34,57 @@ HANDLE queue_mutex;
 
 const OrtApi* g_ort = NULL;
 
-bool initialize_ort_api() {
+const OrtApi* gliclass_initialize_ort_api() {
     g_ort = OrtGetApiBase()->GetApi(ORT_API_VERSION);
-    return (bool)g_ort;
+    return g_ort;
 }
 
-bool validate_inference_config(const InferenceConfig* inference_config) {
+
+bool gliclass_create_inference_config(
+    size_t batch_size,
+    size_t max_length,
+    float threshold,
+    char* classification_type,
+    bool add_prefix_space,
+    GLiClassInferenceConfig* config
+) {
     char* template = "Inference parameter is invalid: %s";
-    if (inference_config->batch_size == 0) {
+    if (batch_size == 0) {
         fprintf(stderr, template, "batch_size shouldn't equal zero");
         return false;
-    } else if (inference_config->max_length == 0) {
+    } else if (max_length == 0) {
         fprintf(stderr, template, "max_length shouldn't equal zero");
         return false;
-    } else if (inference_config->threshold < 0 && inference_config->threshold > 1) {
+    } else if (threshold < 0 && threshold > 1) {
         fprintf(stderr, template, "threshold should be in range 0 ... 1");
         return false;
-    } else if (inference_config->threshold < 0 && inference_config->threshold > 1) {
+    } else if (threshold < 0 && threshold > 1) {
         fprintf(stderr, template, "threshold should be in range 0 ... 1");
         return false;
     } else if (!(
-        strcmp(inference_config->classification_type, "multi-label") 
-        || strcmp(inference_config->classification_type, "single-label")
+        strcmp(classification_type, "multi-label") 
+        || strcmp(classification_type, "single-label")
     )) {
         fprintf(stderr, template, "classification_type should be equal to 'multi-label' or 'single-label'");
         return false;
     }
+    config->batch_size = batch_size;
+    config->max_length = max_length;
+    config->threshold = threshold;
+    config->classification_type = classification_type;
+    config->add_prefix_space = add_prefix_space;
     return true;
 }
 
-// TODO: add overload with inferance config + validate it + parse model config 
+
 GLiClassSession* gliclass_init(
     const char* model_path, 
     const char* model_config_path,
-    const char* tokenizer_path, 
-    const InferenceConfig* inference_config,
+    const char* tokenizer_path,
     const size_t num_threads
 ) {
     // Initializes the ONNX Runtime API
-    if (!initialize_ort_api()) return false;
+    if (!gliclass_initialize_ort_api()) return false;
 
     if (num_threads == 0) {
         fprintf(stderr, "num_threads shouldn't equal zero");
@@ -81,11 +93,6 @@ GLiClassSession* gliclass_init(
 
     GLiClassSession* session = calloc(1, sizeof(GLiClassSession));
     if (!session) return NULL;
-
-    if (!validate_inference_config(inference_config)) {
-        return NULL;
-    }
-    session->inference_config = inference_config;
 
     // Initialize the model config
     session->model_config = initialize_model_config(model_config_path);
@@ -109,7 +116,7 @@ GLiClassSession* gliclass_init(
     }
 
     // Initialize ONNX session (model loading)
-    session->session = create_ort_session_cpu_default(
+    session->session = gliclass_create_ort_session_cpu_default(
         session->env, model_path, num_threads
     );
     if (!session->session) {
@@ -120,7 +127,7 @@ GLiClassSession* gliclass_init(
     return session;
 }
 
-OrtEnv* create_ort_env(const char* env_name) {
+OrtEnv* gliclass_create_ort_env(const char* env_name) {
     OrtEnv* env = NULL;
     OrtStatus* status = g_ort->CreateEnv(ORT_LOGGING_LEVEL_WARNING, env_name, &env);
     if (status != NULL) {
@@ -211,15 +218,8 @@ OrtSessionOptions* initialize_base_options(const int num_threads) {
     return session_options;
 }
 
-/**
- * Creates and initializes an ONNX Runtime session from a model file.
- * 
- * @param env A pointer to the ONNX Runtime environment.
- * @param model_path The file path to the ONNX model.
- * @param num_threads The number of threads to use for inference (CPU only).
- * @return A pointer to the OrtSession if successful, or NULL if an error occurs.
- */
-OrtSession* create_ort_session_cpu_default(OrtEnv* env, const char* model_path, int num_threads) {
+
+OrtSession* gliclass_create_ort_session_cpu_default(OrtEnv* env, const char* model_path, int num_threads) {
     // Check existence
     if (access(model_path, F_OK) != 0) {
         fprintf(stderr, "Error: Model file not found at path: %s\n", model_path);
@@ -237,7 +237,7 @@ OrtSession* create_ort_session_cpu_default(OrtEnv* env, const char* model_path, 
 }
 
 #ifdef USE_CUDA
-OrtSession* create_ort_session_cuda(OrtEnv* env, const char* model_path, int num_threads, int device_id) {
+OrtSession* gliclass_create_ort_session_cuda(OrtEnv* env, const char* model_path, int num_threads, int device_id) {
     // Check existence
     if (access(model_path, F_OK) != 0) {
         fprintf(stderr, "Error: Model file not found at path: %s\n", model_path);
@@ -257,8 +257,14 @@ OrtSession* create_ort_session_cuda(OrtEnv* env, const char* model_path, int num
         g_ort->ReleaseSessionOptions(options);
         return NULL;
     }
-    g_ort->SetSessionGraphOptimizationLevel(options, ORT_ENABLE_ALL);
-
+    status = g_ort->SetSessionGraphOptimizationLevel(options, ORT_ENABLE_ALL);
+    if (status != NULL) {
+        const char* msg = g_ort->GetErrorMessage(status);
+        fprintf(stderr, "Error: Failed to enable graph optimization: %s\n", msg);
+        g_ort->ReleaseStatus(status);
+        g_ort->ReleaseSessionOptions(options);
+        return NULL;
+    }
     OrtSession* session = initialize_ort_session(env, options, model_path);
     g_ort->ReleaseSessionOptions(options);
     return session;
@@ -266,7 +272,7 @@ OrtSession* create_ort_session_cuda(OrtEnv* env, const char* model_path, int num
 #endif
 
 
-OrtSession* create_ort_session_openvino(OrtEnv* env, const char* model_path, int num_threads, const char* device_type) {
+OrtSession* gliclass_create_ort_session_openvino(OrtEnv* env, const char* model_path, int num_threads, const char* device_type) {
     // Check existence
     if (access(model_path, F_OK) != 0) {
         fprintf(stderr, "Error: Model file not found at path: %s\n", model_path);
@@ -304,7 +310,6 @@ OrtSession* create_ort_session_openvino(OrtEnv* env, const char* model_path, int
 GLiClassSession* gliclass_init_custom_ort(
     const char* model_config_path,
     const char* tokenizer_path, 
-    const InferenceConfig* inference_config,
     OrtSession* ort_session
 ) {
     if (!g_ort || !ort_session) {
@@ -317,11 +322,6 @@ GLiClassSession* gliclass_init_custom_ort(
 
     // Initialize ONNX session (model loading)
     session->session = ort_session;
-
-    if (!validate_inference_config(inference_config)) {
-        return NULL;
-    }
-    session->inference_config = inference_config;
 
     // Initialize the model config
     session->model_config = initialize_model_config(model_config_path);
@@ -339,9 +339,10 @@ GLiClassSession* gliclass_init_custom_ort(
     return session;
 }
 
-// single process
+
 bool gliclass_infer(
     GLiClassSession* session,
+    const GLiClassInferenceConfig* config,
     const char* input_text,
     const char* labels[],
     const size_t num_labels,
@@ -365,7 +366,7 @@ bool gliclass_infer(
         return false;
     }
 
-    char* input = prepare_input(input_text, labels, num_labels, session->model_config->prompt_first, session->inference_config->add_prefix_space);
+    char* input = prepare_input(input_text, labels, num_labels, session->model_config->prompt_first, config->add_prefix_space);
     if (!input) {
         fprintf(stderr, "Error while preparing text");
         return false;
@@ -374,7 +375,7 @@ bool gliclass_infer(
     TokenizedInput tokenized = tokenize_input(
         session->tokenizer, 
         (const char*)input, 
-        session->inference_config->max_length
+        config->max_length
     );
 
     OrtValue* input_ids_tensor = NULL;
@@ -400,6 +401,7 @@ bool gliclass_infer(
 
     process_output_tensor(
         session,
+        config,
         output_tensor, 
         labels, 
         num_labels, 
@@ -415,9 +417,10 @@ bool gliclass_infer(
     return true;
 }
 
-// batch process
+
 bool gliclass_infer_batch(
     GLiClassSession* session,
+    const GLiClassInferenceConfig* config,
     const char* input_texts[],
     const size_t num_texts,
     const char** labels[],
@@ -449,8 +452,8 @@ bool gliclass_infer_batch(
 
     // Allocate memory for tensors
     size_t num_batches = (
-        num_texts + session->inference_config->batch_size - 1
-    ) / session->inference_config->batch_size;
+        num_texts + config->batch_size - 1
+    ) / config->batch_size;
     OrtValue** input_ids_tensors = (OrtValue**)calloc(num_batches, sizeof(OrtValue*));
     OrtValue** attention_mask_tensors = (OrtValue**)calloc(num_batches, sizeof(OrtValue*));
     OrtValue** output_tensors = (OrtValue**)calloc(num_batches, sizeof(OrtValue*));
@@ -458,6 +461,7 @@ bool gliclass_infer_batch(
     // Preprocessing stage
     parallel_preprocess(
         session,
+        config,
         num_batches,
         input_texts, 
         num_texts,
@@ -487,13 +491,14 @@ bool gliclass_infer_batch(
     // Postprocess stage - processing batches
     parallel_postprocess(
         session,
+        config,
         output_tensors, 
         num_batches,
         num_texts,
         labels, 
         num_labels,
         num_labels_size, 
-        session->inference_config->classification_type,
+        config->classification_type,
         *out_results,
         *out_num_results
     );
@@ -506,25 +511,22 @@ bool gliclass_infer_batch(
     return true;
 }
 
+
 void gliclass_free_results(GLiClassResult* results, size_t num_results) {
     if (!results) return;
-    // for (size_t i = 0; i < num_results; i++) {
-    //     free(results[i].label);
-    // }
     free(results);
 }
+
 
 void gliclass_free_results_batch(GLiClassResult** results, size_t* num_results, size_t num_results_size) {
     if (!results) return;
     for (size_t i = 0; i < num_results_size; i++) {
-        // for (size_t j = 0; j < num_results[i]; j++) {
-        //     free(results[i][j].label);
-        // }
         free(results[i]);
     }
     free(results);
     free(num_results);
 }
+
 
 void gliclass_cleanup(GLiClassSession* session) {
     if (!session) return;
@@ -534,6 +536,7 @@ void gliclass_cleanup(GLiClassSession* session) {
     if (session->session) g_ort->ReleaseSession(session->session);
     free(session);
 }
+
 
 void gliclass_cleanup_custom_ort(GLiClassSession* session) {
     if (!session) return;

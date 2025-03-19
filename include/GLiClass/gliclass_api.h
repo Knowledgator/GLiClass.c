@@ -18,38 +18,46 @@ extern "C" {
 #include <stddef.h>
 #include <stdbool.h>
 #include "onnxruntime_c_api.h"
-#include "tokenizer.h"
+#include "tokenizers_c.h"
 
 GLICLASS_API extern const OrtApi* g_ort;
 
-typedef struct {
+typedef struct GLiClassModelConfig {
     bool prompt_first;
-} ModelConfig;
+} GLiClassModelConfig;
 
-typedef struct {
+typedef struct GLiClassInferenceConfig {
     size_t batch_size;
     size_t max_length;
     float threshold;
     char* classification_type;
     bool add_prefix_space;
-} InferenceConfig;
+} GLiClassInferenceConfig;
 
-typedef struct {
-    const ModelConfig* model_config;
-    const InferenceConfig* inference_config; 
+typedef struct GLiClassSession {
+    const GLiClassModelConfig* model_config;
     TokenizerHandle tokenizer;
     OrtSession* session;
     OrtEnv* env;
+    const bool use_mutex;
 } GLiClassSession;
 
 // Struct to hold inference results
-typedef struct {
+typedef struct GLiClassResult {
     char* label;   // Predicted label
     float score;   // Confidence score
 } GLiClassResult;
 
+GLICLASS_API const OrtApi* gliclass_initialize_ort_api();
 
-GLICLASS_API bool initialize_ort_api();
+bool gliclass_create_inference_config(
+    size_t batch_size,
+    size_t max_length,
+    float threshold,
+    char* classification_type,
+    bool add_prefix_space,
+    GLiClassInferenceConfig* config
+);
 
 /**
  * Initialize GLiClass model and tokenizer
@@ -61,17 +69,30 @@ GLICLASS_API bool initialize_ort_api();
 GLICLASS_API GLiClassSession* gliclass_init(
     const char* model_path, 
     const char* model_config_path,
-    const char* tokenizer_path, 
-    const InferenceConfig* inference_config,
+    const char* tokenizer_path,
     const size_t num_threads
 );
 
 // Initialize ORT environment
-GLICLASS_API OrtEnv* create_ort_env(const char* env_name);
+GLICLASS_API OrtEnv* gliclass_create_ort_env(const char* env_name);
 
-GLICLASS_API OrtSession* create_ort_session_cpu_default(OrtEnv* env, const char* model_path, const int num_threads);
-GLICLASS_API OrtSession* create_ort_session_openvino(OrtEnv* env, const char* model_path, const int num_threads, const char* device_type);
-GLICLASS_API OrtSession* create_ort_session_cuda(OrtEnv* env, const char* model_path, const int num_threads, const int device_id);
+/**
+ * Creates and initializes an ONNX Runtime session from a model file.
+ * 
+ * @param env A pointer to the ONNX Runtime environment.
+ * @param model_path The file path to the ONNX model.
+ * @param num_threads The number of threads to use for inference (CPU only).
+ * @return A pointer to the OrtSession if successful, or NULL if an error occurs.
+ */
+GLICLASS_API OrtSession* gliclass_create_ort_session_cpu_default(
+    OrtEnv* env, const char* model_path, const int num_threads
+);
+GLICLASS_API OrtSession* gliclass_create_ort_session_openvino(
+    OrtEnv* env, const char* model_path, const int num_threads, const char* device_type
+);
+GLICLASS_API OrtSession* gliclass_create_ort_session_cuda(
+    OrtEnv* env, const char* model_path, const int num_threads, const int device_id
+);
 
 /**
  * Initialize GLiClass model and tokenizer
@@ -82,8 +103,7 @@ GLICLASS_API OrtSession* create_ort_session_cuda(OrtEnv* env, const char* model_
  */
 GLICLASS_API GLiClassSession* gliclass_init_custom_ort(
     const char* model_config_path,
-    const char* tokenizer_path, 
-    const InferenceConfig* inference_config,
+    const char* tokenizer_path,
     OrtSession* session
 );
 
@@ -99,9 +119,10 @@ GLICLASS_API GLiClassSession* gliclass_init_custom_ort(
  */
 GLICLASS_API bool gliclass_infer(
     GLiClassSession* session,
+    const GLiClassInferenceConfig* config,
     const char* input_text,
     const char* labels[],
-    size_t num_labels,
+    const size_t num_labels,
     GLiClassResult* out_results[],
     size_t* out_num_results
 );
@@ -118,6 +139,7 @@ GLICLASS_API bool gliclass_infer(
  */
 GLICLASS_API bool gliclass_infer_batch(
     GLiClassSession* session,
+    const GLiClassInferenceConfig* config,
     const char* input_texts[],
     const size_t num_texts,
     const char** labels[],

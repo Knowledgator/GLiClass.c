@@ -3,9 +3,9 @@
 
 #include <stddef.h>
 #include <stdbool.h>
-#include "gliclass_api.h"
+#include "GLiClass/gliclass_api.h"
 
 char* read_file(const char* filename);
-ModelConfig* parse_model_config_json(const char* json_string); 
+GLiClassModelConfig* parse_model_config_json(const char* json_string); 
 bool string_to_bool(const char *str);
 #endif // READ_DATA_H
