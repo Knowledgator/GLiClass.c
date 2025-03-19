@@ -8,15 +8,35 @@
 
 GLiClassModelConfig* initialize_model_config(const char* model_config_path);
 
-///// TO TENSORS /////
-int64_t* flatten_int_array(int64_t** data, size_t rows, size_t cols);
-OrtValue* create_tensor(int64_t* data, size_t rows, size_t cols);
+/**
+ * Prepares input tensors for the ONNX model using tokenized input data.
+ * 
+ * @param tokenized A pointer to the TokenizedInputs structure containing the tokenized data.
+ * @param input_ids_tensor A pointer to the OrtValue that will store the input IDs tensor.
+ * @param attention_mask_tensor A pointer to the OrtValue that will store the attention mask tensor.
+ * @return 0 if successful, -1 if an error occurs during tensor preparation.
+ */
 int prepare_input_tensor(TokenizedInput* tokenized, OrtValue** input_ids_tensor, OrtValue** attention_mask_tensor);
+
+/**
+ * Prepares input tensors for the ONNX model using tokenized input data.
+ * 
+ * @param tokenized A pointer to the TokenizedInputs structure containing the tokenized data.
+ * @param input_ids_tensor A pointer to the OrtValue that will store the input IDs tensor.
+ * @param attention_mask_tensor A pointer to the OrtValue that will store the attention mask tensor.
+ * @return 0 if successful, -1 if an error occurs during tensor preparation.
+ */
 int prepare_input_tensors(TokenizedInputs* tokenized, OrtValue** input_ids_tensor, OrtValue** attention_mask_tensor);
 
-/// ONNX ///
-OrtEnv* initialize_ort_environment();
-OrtSession* create_ort_session(OrtEnv* env, const char* model_path, int num_threads);
+/**
+ * Runs inference using the ONNX model session and input tensors.
+ * 
+ * @param session A pointer to the ONNX model session.
+ * @param input_ids_tensor A pointer to the OrtValue representing the input IDs tensor.
+ * @param attention_mask_tensor A pointer to the OrtValue representing the attention mask tensor.
+ * @return A pointer to an OrtValue containing the model's output, or NULL if inference fails.
+ * IMPORTANT: The caller is responsible for releasing the output_tensor via g_ort->ReleaseValue(output_tensor)
+ */
 OrtValue* run_inference(OrtSession* session, OrtValue* input_ids_tensor, OrtValue* attention_mask_tensor);
 
 #endif // MODEL_H

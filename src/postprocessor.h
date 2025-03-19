@@ -5,8 +5,6 @@
 #include "onnxruntime_c_api.h"
 #include "GLiClass/gliclass_api.h"
 
-float sigmoid(float x);
-
 /**
  * Processes the output tensor (logits) and prints the predicted labels and scores based on the given classification type (multi-label or single-label).
  * 

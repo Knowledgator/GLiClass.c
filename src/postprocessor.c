@@ -6,6 +6,7 @@
 #include <math.h>
 
 #include "model.h"
+
 /**
  * Sigmoid function to map logits to probabilities.
  * 

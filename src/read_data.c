@@ -6,13 +6,6 @@
 #include <stdbool.h>
 #include "cJSON.h"
 
-/**
- * Reads the entire content of a file and returns it as a string.
- *
- * @param filename The name of the file to read.
- * @return A dynamically allocated string containing the file content, or NULL if the file could not be opened.
- *         The caller is responsible for freeing the allocated memory.
- */
 char* read_file(const char* filename) {
     FILE* file = fopen(filename, "rb");
     if (!file) {
@@ -29,21 +22,7 @@ char* read_file(const char* filename) {
     return content;
 }
 
-/**
- * Parses a JSON string to extract information such as texts, labels, and classification type.
- *
- * @param json_string The JSON string to parse.
- * @param texts Pointer to an array of strings that will store the extracted texts.
- * @param num_texts Pointer to a size_t that will store the number of texts extracted.
- * @param labels Pointer to an array of arrays that will store the extracted labels for each text.
- * @param num_labels Pointer to a dynamic array of size_t representing the number of labels for each text.
- * @param num_labels_size Pointer to a size_t that will store the number of labels (if all texts have the same labels).
- * @param same_labels Pointer to a boolean that indicates whether all texts share the same labels.
- * @param classification_type Pointer to a string that will store the classification type.
- *
- * This function dynamically allocates memory for texts, labels, and related data. 
- * It is the caller's responsibility to free the allocated memory.
- */
+
 GLiClassModelConfig* parse_model_config_json(const char* json_string) {
     GLiClassModelConfig* config = (GLiClassModelConfig*)calloc(1, sizeof(GLiClassModelConfig));
     if (!config) {

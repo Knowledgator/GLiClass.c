@@ -20,7 +20,6 @@ GLiClassModelConfig* initialize_model_config(const char* model_config_path) {
     return c;
 }
 
-////////////////////////////////////////////////////////// TO TENSORS //////////////////////////////////////////////////////
 /**
  * Flattens a 2D array of integers into a 1D array of int64_t for use in tensor creation.
  * 
@@ -86,14 +85,7 @@ OrtValue* create_tensor(int64_t* data, size_t rows, size_t cols) {
     return tensor;
 }
 
-/**
- * Prepares input tensors for the ONNX model using tokenized input data.
- * 
- * @param tokenized A pointer to the TokenizedInputs structure containing the tokenized data.
- * @param input_ids_tensor A pointer to the OrtValue that will store the input IDs tensor.
- * @param attention_mask_tensor A pointer to the OrtValue that will store the attention mask tensor.
- * @return 0 if successful, -1 if an error occurs during tensor preparation.
- */
+
 int prepare_input_tensor(TokenizedInput* tokenized, OrtValue** input_ids_tensor, OrtValue** attention_mask_tensor) {
     *input_ids_tensor = create_tensor(tokenized->input_ids, 1, tokenized->seq_length);
     if (input_ids_tensor == NULL) {
@@ -109,14 +101,7 @@ int prepare_input_tensor(TokenizedInput* tokenized, OrtValue** input_ids_tensor,
     return 0;
 }
 
-/**
- * Prepares input tensors for the ONNX model using tokenized input data.
- * 
- * @param tokenized A pointer to the TokenizedInputs structure containing the tokenized data.
- * @param input_ids_tensor A pointer to the OrtValue that will store the input IDs tensor.
- * @param attention_mask_tensor A pointer to the OrtValue that will store the attention mask tensor.
- * @return 0 if successful, -1 if an error occurs during tensor preparation.
- */
+
 int prepare_input_tensors(TokenizedInputs* tokenized, OrtValue** input_ids_tensor, OrtValue** attention_mask_tensor) {
     // preparing input_ids
     int64_t* input_ids_data = flatten_int_array(tokenized->input_ids, tokenized->batch_size, tokenized->seq_length);
@@ -147,15 +132,6 @@ int prepare_input_tensors(TokenizedInputs* tokenized, OrtValue** input_ids_tenso
 }
 
 
-////////////////////////////////////////////////////// ONNX ////////////////////////////////////////////////////////////////////////
-/**
- * Runs inference using the ONNX model session and input tensors.
- * 
- * @param session A pointer to the ONNX model session.
- * @param input_ids_tensor A pointer to the OrtValue representing the input IDs tensor.
- * @param attention_mask_tensor A pointer to the OrtValue representing the attention mask tensor.
- * @return A pointer to an OrtValue containing the model's output, or NULL if inference fails.
- */
 OrtValue* run_inference(OrtSession* session, OrtValue* input_ids_tensor, OrtValue* attention_mask_tensor) {
     OrtStatus* status = NULL;
     OrtRunOptions* run_options = NULL;
@@ -236,26 +212,5 @@ OrtValue* run_inference(OrtSession* session, OrtValue* input_ids_tensor, OrtValu
         }
         return NULL;
     }
-    
-    // Return the result
-    // IMPORTANT: The caller is responsible for releasing the output_tensor
-    // via g_ort->ReleaseValue(output_tensor)
     return output_tensor;
-}
-
-/**
- * Initializes the ONNX Runtime environment.
- * 
- * @return A pointer to the OrtEnv, or NULL if environment creation fails.
- */
-OrtEnv* initialize_ort_environment() {
-    OrtEnv* env = NULL;
-    OrtStatus* status = g_ort->CreateEnv(ORT_LOGGING_LEVEL_WARNING, "GLiClass", &env);
-    if (status != NULL) {
-        const char* msg = g_ort->GetErrorMessage(status);
-        fprintf(stderr, "Error: Failed to create env for ONNX Runtime: %s\n", msg);
-        g_ort->ReleaseStatus(status);
-        return NULL;
-    }
-    return env;
 }
