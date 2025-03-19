@@ -50,7 +50,7 @@ typedef struct GLiClassResult {
 
 GLICLASS_API const OrtApi* gliclass_initialize_ort_api();
 
-bool gliclass_create_inference_config(
+GLICLASS_API bool gliclass_create_inference_config(
     size_t batch_size,
     size_t max_length,
     float threshold,
