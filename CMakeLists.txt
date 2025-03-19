@@ -137,7 +137,7 @@ target_compile_definitions(GLiClass PRIVATE GLICLASS_EXPORTS)
 
 # Public headers (for installation)
 set_target_properties(GLiClass PROPERTIES
-  PUBLIC_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/include/gliclass_api.h")
+  PUBLIC_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/include/GLiClass/gliclass_api.h")
 
 # Include directories with tokenizers-cpp header files
 target_include_directories(GLiClass PUBLIC
@@ -159,7 +159,7 @@ install(TARGETS GLiClass
     RUNTIME DESTINATION bin  # DLL
     LIBRARY DESTINATION lib  # Shared libraries
     ARCHIVE DESTINATION lib  # Static libraries
-    PUBLIC_HEADER DESTINATION include  # Public headers
+    PUBLIC_HEADER DESTINATION include/GLiClass  # Public headers
 )
 
 # Install headers inside include/ preserving directory structure
