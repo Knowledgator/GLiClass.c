@@ -109,7 +109,7 @@ GLiClassSession* gliclass_init(
     }
 
     // Initialize ONNX session (model loading)
-    session->session = create_ort_session(
+    session->session = create_ort_session_cpu_default(
         session->env, model_path, num_threads
     );
     if (!session->session) {
@@ -134,7 +134,7 @@ OrtEnv* create_ort_env(const char* env_name) {
 }
 
 #ifdef _WIN32
-wchar_t* convert_path(const char* path) {
+static wchar_t* convert_path(const char* path) {
     size_t len = mbstowcs(NULL, path, 0);
     if(len == (size_t)-1) {
         fprintf(stderr, "Error: Unable to convert path to wchar_t*: %s\n", path);
@@ -152,21 +152,40 @@ wchar_t* convert_path(const char* path) {
 }
 #endif
 
-OrtSession* create_ort_session_with_openvino(OrtEnv* env, const char* model_path, int num_threads, const char* device_type) {
-     // Check existence
-     if (access(model_path, F_OK) != 0) {
-        fprintf(stderr, "Error: Model file not found at path: %s\n", model_path);
-        g_ort->ReleaseEnv(env);
+
+OrtSession* initialize_ort_session(OrtEnv* env, OrtSessionOptions* options, const char* model_path) {
+    OrtSession* session = NULL;
+    OrtStatus* status = NULL;
+
+    // Load the model and create a session
+    #ifdef _WIN32
+    wchar_t* path = convert_path(model_path);
+    if (!path) {
+        g_ort->ReleaseSessionOptions(options);
         return NULL;
     }
+    status = g_ort->CreateSession(env, path, options, &session);
+    free(path);
+    #else
+    status = g_ort->CreateSession(env, model_path, options, &session);
+    #endif
+    if (status != NULL) {
+        const char* msg = g_ort->GetErrorMessage(status);
+        fprintf(stderr, "Error: Failed to create session: %s\n", msg);
+        g_ort->ReleaseStatus(status);
+        g_ort->ReleaseSessionOptions(options);
+        return NULL;
+    }
+    return session;
+}
 
+OrtSessionOptions* initialize_base_options(const int num_threads) {
     OrtSessionOptions* session_options = NULL;
     OrtStatus* status = g_ort->CreateSessionOptions(&session_options);
     if (status != NULL) {
         const char* msg = g_ort->GetErrorMessage(status);
-        fprintf(stderr, "Failed to create ORT SessionOptions: %s\n", msg);
+        fprintf(stderr, "Error: Failed to create session options: %s\n", msg);
         g_ort->ReleaseStatus(status);
-        g_ort->ReleaseEnv(env);
         return NULL;
     }
 
@@ -177,7 +196,6 @@ OrtSession* create_ort_session_with_openvino(OrtEnv* env, const char* model_path
         fprintf(stderr, "Error: Failed to set intra-op threads: %s\n", msg);
         g_ort->ReleaseStatus(status);
         g_ort->ReleaseSessionOptions(session_options);
-        g_ort->ReleaseEnv(env);
         return NULL;
     }
 
@@ -188,16 +206,82 @@ OrtSession* create_ort_session_with_openvino(OrtEnv* env, const char* model_path
         fprintf(stderr, "Error: Failed to set inter-op threads: %s\n", msg);
         g_ort->ReleaseStatus(status);
         g_ort->ReleaseSessionOptions(session_options);
-        g_ort->ReleaseEnv(env);
         return NULL;
     }
+    return session_options;
+}
+
+/**
+ * Creates and initializes an ONNX Runtime session from a model file.
+ * 
+ * @param env A pointer to the ONNX Runtime environment.
+ * @param model_path The file path to the ONNX model.
+ * @param num_threads The number of threads to use for inference (CPU only).
+ * @return A pointer to the OrtSession if successful, or NULL if an error occurs.
+ */
+OrtSession* create_ort_session_cpu_default(OrtEnv* env, const char* model_path, int num_threads) {
+    // Check existence
+    if (access(model_path, F_OK) != 0) {
+        fprintf(stderr, "Error: Model file not found at path: %s\n", model_path);
+        return NULL;
+    }
+
+    // Create session options
+    OrtSessionOptions* options = initialize_base_options(num_threads);
+    if (!options) return NULL;
+
+    // Create session
+    OrtSession* session = initialize_ort_session(env, options, model_path);
+    g_ort->ReleaseSessionOptions(options);
+    return session;
+}
+
+#ifdef USE_CUDA
+OrtSession* create_ort_session_cuda(OrtEnv* env, const char* model_path, int num_threads, int device_id) {
+    // Check existence
+    if (access(model_path, F_OK) != 0) {
+        fprintf(stderr, "Error: Model file not found at path: %s\n", model_path);
+        return NULL;
+    }
+
+    // Create session options
+    OrtSessionOptions* options = initialize_base_options(num_threads);
+    if (!options) return NULL;
+
+    // Append CUDA session options
+    OrtStatus* status = OrtSessionOptionsAppendExecutionProvider_CUDA(options, device_id);
+    if (status != NULL) {
+        const char* msg = g_ort->GetErrorMessage(status);
+        fprintf(stderr, "Error: Failed to add CUDA Execution Provider: %s\n", msg);
+        g_ort->ReleaseStatus(status);
+        g_ort->ReleaseSessionOptions(options);
+        return NULL;
+    }
+    g_ort->SetSessionGraphOptimizationLevel(options, ORT_ENABLE_ALL);
+
+    OrtSession* session = initialize_ort_session(env, options, model_path);
+    g_ort->ReleaseSessionOptions(options);
+    return session;
+}
+#endif
+
+
+OrtSession* create_ort_session_openvino(OrtEnv* env, const char* model_path, int num_threads, const char* device_type) {
+    // Check existence
+    if (access(model_path, F_OK) != 0) {
+        fprintf(stderr, "Error: Model file not found at path: %s\n", model_path);
+        return NULL;
+    }
+
+    // Create session options
+    OrtSessionOptions* options = initialize_base_options(num_threads);
+    if (!options) return NULL;
 
     // Append OpenVINO EP
     const char* keys[] = {"device_type"};
     const char* values[] = {device_type};
-
-    status = g_ort->SessionOptionsAppendExecutionProvider_OpenVINO_V2(
-        session_options,
+    OrtStatus* status = g_ort->SessionOptionsAppendExecutionProvider_OpenVINO_V2(
+        options,
         keys,
         values,
         1 // Number of key-value pairs
@@ -206,40 +290,16 @@ OrtSession* create_ort_session_with_openvino(OrtEnv* env, const char* model_path
         const char* msg = g_ort->GetErrorMessage(status);
         fprintf(stderr, "Failed to append OpenVINO EP: %s\n", msg);
         g_ort->ReleaseStatus(status);
-        g_ort->ReleaseSessionOptions(session_options);
+        g_ort->ReleaseSessionOptions(options);
         g_ort->ReleaseEnv(env);
         return NULL;
     }
 
-    OrtSession* session = NULL;    
-    // Load the model and create a session
-    #ifdef _WIN32
-    wchar_t* path = convert_path(model_path);
-    if (!path) {
-        g_ort->ReleaseStatus(status);
-        g_ort->ReleaseSessionOptions(session_options);
-        g_ort->ReleaseEnv(env);
-        return NULL;
-    }
-
-    // Create session
-    status = g_ort->CreateSession(env, path, session_options, &session);
-    free(path);
-    #else
-    status = g_ort->CreateSession(env, model_path, session_options, &session);
-    #endif
-    if (status != NULL) {
-        const char* msg = g_ort->GetErrorMessage(status);
-        fprintf(stderr, "Failed to create ORT Session: %s\n", msg);
-        g_ort->ReleaseStatus(status);
-        g_ort->ReleaseSessionOptions(session_options);
-        g_ort->ReleaseEnv(env);
-        return NULL;
-    }
-    g_ort->ReleaseSessionOptions(session_options); // Free session options after creating session
-
+    OrtSession* session = initialize_ort_session(env, options, model_path);
+    g_ort->ReleaseSessionOptions(options); // Free session options after creating session
     return session;
 }
+
 
 GLiClassSession* gliclass_init_custom_ort(
     const char* model_config_path,

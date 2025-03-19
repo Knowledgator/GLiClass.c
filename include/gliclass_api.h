@@ -48,9 +48,6 @@ typedef struct {
     float score;   // Confidence score
 } GLiClassResult;
 
-#ifdef _WIN32
-GLICLASS_API wchar_t* convert_path(const char* path);
-#endif
 
 GLICLASS_API bool initialize_ort_api();
 
@@ -72,7 +69,9 @@ GLICLASS_API GLiClassSession* gliclass_init(
 // Initialize ORT environment
 GLICLASS_API OrtEnv* create_ort_env(const char* env_name);
 
-GLICLASS_API OrtSession* create_ort_session_with_openvino(OrtEnv* env, const char* model_path, const int num_threads, const char* device_type);
+GLICLASS_API OrtSession* create_ort_session_cpu_default(OrtEnv* env, const char* model_path, const int num_threads);
+GLICLASS_API OrtSession* create_ort_session_openvino(OrtEnv* env, const char* model_path, const int num_threads, const char* device_type);
+GLICLASS_API OrtSession* create_ort_session_cuda(OrtEnv* env, const char* model_path, const int num_threads, const int device_id);
 
 /**
  * Initialize GLiClass model and tokenizer
