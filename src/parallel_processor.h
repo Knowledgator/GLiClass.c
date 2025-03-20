@@ -33,7 +33,8 @@ void parallel_preprocess(
     const size_t num_labels[],
     const size_t num_labels_size,
     OrtValue** input_ids_tensors,
-    OrtValue** attention_mask_tensors
+    OrtValue** attention_mask_tensors,
+    bool** truncated
 );
 
 /**

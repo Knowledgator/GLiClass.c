@@ -54,6 +54,7 @@ int main() {
     GLiClassResult** results = NULL;
     size_t* results_shape = NULL;
     size_t results_shape_size = 0;
+    bool* truncated = NULL; 
     
     double time = (double)clock() / CLOCKS_PER_SEC;
     bool ok = gliclass_infer_batch(
@@ -66,7 +67,8 @@ int main() {
         labels_shape_size,
         &results,
         &results_shape,
-        &results_shape_size
+        &results_shape_size,
+        &truncated
     );
     time = (double)clock() / CLOCKS_PER_SEC - time;
     fprintf(stdout, "Elapsed: %f s\n", time);
@@ -79,6 +81,7 @@ int main() {
     
     for (size_t i = 0; i < results_shape_size; i++) {
         fprintf(stdout, "\nText_%ld/%ld: %s\n", i, results_shape_size, texts[i]);
+        fprintf(stdout, "\nTruncated: %s\n", truncated[i] ? "true": "false");
         for (size_t j = 0; j < results_shape[i]; j++) {
             fprintf(stdout, "Label_%ld: %s, score: %f\n", j, results[i][j].label, results[i][j].score);
         }      

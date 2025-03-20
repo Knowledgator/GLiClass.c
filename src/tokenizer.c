@@ -14,8 +14,15 @@
     #define F_OK 0
 #endif
 
-TokenizedInputs tokenize_inputs(TokenizerHandle tokenizer, const char** inputs, size_t num_texts, size_t max_length) {
-    TokenizerEncodeResult* results = (TokenizerEncodeResult*)calloc(num_texts, sizeof(TokenizerEncodeResult));
+TokenizedInputs tokenize_inputs(
+    TokenizerHandle tokenizer, 
+    const char** inputs, 
+    size_t num_texts, 
+    size_t max_length
+) {
+    TokenizerEncodeResult* results = (
+        (TokenizerEncodeResult*)calloc(num_texts, sizeof(TokenizerEncodeResult))
+    );
     if (!results) {
         fprintf(stderr, "Error while allocating memmory for tokenization results\n");
         exit(1);
@@ -58,6 +65,7 @@ TokenizedInputs tokenize_inputs(TokenizerHandle tokenizer, const char** inputs, 
     tokenized.attention_mask = (int64_t**)calloc(num_texts, sizeof(int64_t*));
     tokenized.batch_size = num_texts;
     tokenized.seq_length = seq_length;
+    tokenized.truncated = (bool*)calloc(num_texts, sizeof(bool));
 
     for (size_t i = 0; i < num_texts; ++i) {
         tokenized.input_ids[i] = (int64_t*)calloc(seq_length, sizeof(int64_t));
@@ -68,15 +76,16 @@ TokenizedInputs tokenize_inputs(TokenizerHandle tokenizer, const char** inputs, 
             if (j < results[i].len) {
                 if (j >= max_length) {
                     // If the length exceeds max_length, cut it off
+                    tokenized.truncated[i] = true;
                     break;
                 }
                 tokenized.input_ids[i][j] = results[i].token_ids[j];
-                tokenized.token_type_ids[i][j] = 0;  // In this case, for simplicity, we set it to 0
+                // tokenized.token_type_ids[i][j] = 0;  // In this case, for simplicity, we set it to 0
                 tokenized.attention_mask[i][j] = 1;  // 1 if token is exists
             } else {
-                tokenized.input_ids[i][j] = 0;  // Padding
-                tokenized.token_type_ids[i][j] = 0;
-                tokenized.attention_mask[i][j] = 0;  // Padding токен не учитывается
+                // tokenized.input_ids[i][j] = 0;  // Padding
+                // tokenized.token_type_ids[i][j] = 0;
+                // tokenized.attention_mask[i][j] = 0;
             }
         }
     }
@@ -108,20 +117,22 @@ TokenizedInput tokenize_input(TokenizerHandle tokenizer, const char* input, size
     tokenized.token_type_ids = (int64_t*)calloc(seq_length, sizeof(int64_t));
     tokenized.attention_mask = (int64_t*)calloc(seq_length, sizeof(int64_t));
     tokenized.seq_length = seq_length;
+    tokenized.truncated = false;
 
     for (size_t j = 0; j < seq_length; ++j) {
         if (j < result.len) {
             if (j >= max_length) {
                 // If the length exceeds max_length, cut it off
+                tokenized.truncated = true;
                 break;
             }
             tokenized.input_ids[j] = result.token_ids[j];
-            tokenized.token_type_ids[j] = 0;  // In this case, for simplicity, we set it to 0
+            // tokenized.token_type_ids[j] = 0;  // In this case, for simplicity, we set it to 0
             tokenized.attention_mask[j] = 1;  // 1 if token is exists
         } else {
-            tokenized.input_ids[j] = 0;  // Padding
-            tokenized.token_type_ids[j] = 0;
-            tokenized.attention_mask[j] = 0;  // Padding токен не учитывается
+            // tokenized.input_ids[j] = 0;  // Padding
+            // tokenized.token_type_ids[j] = 0;
+            // tokenized.attention_mask[j] = 0;
         }
     }
 

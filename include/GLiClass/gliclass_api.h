@@ -126,7 +126,8 @@ GLICLASS_API bool gliclass_infer(
     const char* labels[],
     const size_t num_labels,
     GLiClassResult* out_results[],
-    size_t* out_num_results
+    size_t* out_num_results,
+    bool* truncated
 );
 
 /**
@@ -149,7 +150,8 @@ GLICLASS_API bool gliclass_infer_batch(
     const size_t num_labels_size, // TODO: rename
     GLiClassResult** out_results[],
     size_t* out_num_results[],
-    size_t* out_num_results_size
+    size_t* out_num_results_size,
+    bool* truncated[]
 );
 
 /**

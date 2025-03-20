@@ -14,6 +14,7 @@ static bool run_inference_with_config(
     // Run inference
     GLiClassResult* results = NULL;
     size_t num_results = 0;
+    bool truncated = false;
 
     bool ok = gliclass_infer(
         session,
@@ -22,7 +23,8 @@ static bool run_inference_with_config(
         labels,
         num_labels,
         &results,
-        &num_results
+        &num_results,
+        &truncated
     );
 
     if (!ok) {
@@ -32,6 +34,7 @@ static bool run_inference_with_config(
 
     // Output results
     printf("\nText: %s\n", text);
+    fprintf(stdout, "\nTruncated: %s\n", truncated ? "true": "false");
     for (size_t i = 0; i < num_results; i++) {
         printf("Label_%ld: %s, score: %.4f\n", i, results[i].label, results[i].score);
     }

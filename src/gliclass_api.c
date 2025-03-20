@@ -369,7 +369,8 @@ bool gliclass_infer(
     const char* labels[],
     const size_t num_labels,
     GLiClassResult* out_results[],
-    size_t* out_num_results
+    size_t* out_num_results,
+    bool* truncated
 ) {
     if (!session || !input_text || !labels || num_labels == 0) {
         fprintf(stderr, "Inputs have invalid value!");
@@ -395,6 +396,7 @@ bool gliclass_infer(
         (const char*)input, 
         config->max_length
     );
+    *truncated = tokenized.truncated;
 
     OrtValue* input_ids_tensor = NULL;
     OrtValue* attention_mask_tensor = NULL;
@@ -448,7 +450,8 @@ bool gliclass_infer_batch(
     const size_t num_labels_size, // TODO: rename
     GLiClassResult** out_results[],
     size_t* out_num_results[],
-    size_t* out_num_results_size
+    size_t* out_num_results_size,
+    bool** truncated
 ) {
     if (
         !session || !input_texts || !labels || !num_labels || num_labels_size == 0 
@@ -485,7 +488,8 @@ bool gliclass_infer_batch(
         num_labels, 
         num_labels_size, 
         input_ids_tensors,
-        attention_mask_tensors
+        attention_mask_tensors,
+        truncated
     );
 
     // Inference stage

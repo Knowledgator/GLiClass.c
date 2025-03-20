@@ -16,6 +16,7 @@ typedef struct {
     int64_t** attention_mask;   /**< Array indicating which tokens are actual tokens (1) and which are padding (0). */
     size_t batch_size;      /**< Number of input texts in the batch. */
     size_t seq_length;       /**< Maximum sequence length for the input texts. */
+    bool* truncated;
 } TokenizedInputs;
 
 /**
@@ -29,6 +30,7 @@ typedef struct {
     int64_t* token_type_ids;   /**< Array of token type IDs for each input text. */
     int64_t* attention_mask;   /**< Array indicating which tokens are actual tokens (1) and which are padding (0). */
     size_t seq_length;       /**< Maximum sequence length for the input texts. */
+    bool truncated;
 } TokenizedInput;
 
 /**

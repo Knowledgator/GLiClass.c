@@ -69,6 +69,7 @@ int main() {
     for (size_t t = 0; t < num_texts; ++t) {
         GLiClassResult* results = NULL;
         size_t num_results = 0;
+        bool truncated = false;
 
         bool ok = gliclass_infer(
             session,
@@ -77,7 +78,8 @@ int main() {
             labels,
             num_labels,
             &results,
-            &num_results
+            &num_results,
+            &truncated
         );
 
         if (!ok) {
@@ -88,6 +90,7 @@ int main() {
 
         // Print results
         printf("\nText %ld: %s\n", t + 1, texts[t]);
+        fprintf(stdout, "\nTruncated: %s\n", truncated ? "true": "false");
         printf("num_results: %ld\n", num_results);
         for (size_t i = 0; i < num_results; ++i) {
             printf("Label_%ld: %s, Score: %f\n", i, results[i].label, results[i].score);
