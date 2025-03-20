@@ -112,12 +112,15 @@ GLICLASS_API GLiClassSession* gliclass_init_custom_ort(
 /**
  * Perform classification on input text and labels
  * @param session Initialized session handle
+ * @param config Inference config
  * @param text Input text
  * @param labels Array of candidate labels
  * @param num_labels Number of labels
  * @param out_results Array of results (allocated inside function)
- * @param out_result_count Number of results returned
- * @return 0 on success, non-zero on error
+ * @param out_num_results Number of results returned
+ * @param truncated If the input was truncated during preprocessing
+ * (i.e., the number of tokens was reduced to the max_length specified in the inference config).
+ * @return true on success, false on error
  */
 GLICLASS_API bool gliclass_infer(
     GLiClassSession* session,
@@ -133,12 +136,17 @@ GLICLASS_API bool gliclass_infer(
 /**
  * Perform batch classification on input texts and labels
  * @param session Initialized session handle
+ * @param config Inference config
  * @param text Input text
  * @param labels Array of candidate labels
  * @param num_labels Number of labels
  * @param out_results Array of results (allocated inside function)
- * @param out_result_count Number of results returned
- * @return 0 on success, non-zero on error
+ * @param out_num_results Number of results returned for each text
+ * @param out_num_result_size Number of results returned for texts
+ * @param truncated If the input was truncated during preprocessing
+ * (i.e., the number of tokens was reduced to the max_length specified in the inference config),
+ * the array represents each processed input (per text-labels pair).
+ * @return true on success, false on error
  */
 GLICLASS_API bool gliclass_infer_batch(
     GLiClassSession* session,
