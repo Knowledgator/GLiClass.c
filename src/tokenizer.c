@@ -46,47 +46,43 @@ TokenizedInputs tokenize_inputs(
         exit(1);
     }
 
-    size_t seq_length = 0; // This will be the length of the longest sequence after trimming.
-    for (size_t i = 0; i < num_texts; ++i) {
-        if (results[i].len > max_length) {
-            seq_lengths[i] = max_length;
-        } else {
-            seq_lengths[i] = results[i].len;
-        }
-        if (seq_lengths[i] > seq_length) {
-            seq_length = seq_lengths[i];
-        }
-    }
-
     // Mem alloc for tokenized data
     TokenizedInputs tokenized;
     tokenized.input_ids = (int64_t**)calloc(num_texts, sizeof(int64_t*));
     tokenized.token_type_ids = (int64_t**)calloc(num_texts, sizeof(int64_t*));
     tokenized.attention_mask = (int64_t**)calloc(num_texts, sizeof(int64_t*));
-    tokenized.batch_size = num_texts;
-    tokenized.seq_length = seq_length;
     tokenized.truncated = (bool*)calloc(num_texts, sizeof(bool));
+    tokenized.batch_size = num_texts;
+    tokenized.seq_length = 0; // This will be the length of the longest sequence after trimming.
+    for (size_t i = 0; i < num_texts; ++i) {
+        if (results[i].len > max_length) {
+            seq_lengths[i] = max_length;
+            tokenized.truncated[i] = true;
+        } else {
+            seq_lengths[i] = results[i].len;
+            // tokenized.truncated[i] = false; // already set by calloc 
+        }
+        if (seq_lengths[i] > tokenized.seq_length) {
+            tokenized.seq_length = seq_lengths[i];
+        }
+    }
 
     for (size_t i = 0; i < num_texts; ++i) {
-        tokenized.input_ids[i] = (int64_t*)calloc(seq_length, sizeof(int64_t));
-        tokenized.token_type_ids[i] = (int64_t*)calloc(seq_length, sizeof(int64_t));
-        tokenized.attention_mask[i] = (int64_t*)calloc(seq_length, sizeof(int64_t));
+        tokenized.input_ids[i] = (int64_t*)calloc(tokenized.seq_length, sizeof(int64_t));
+        tokenized.token_type_ids[i] = (int64_t*)calloc(tokenized.seq_length, sizeof(int64_t));
+        tokenized.attention_mask[i] = (int64_t*)calloc(tokenized.seq_length, sizeof(int64_t));
 
-        for (size_t j = 0; j < seq_length; ++j) {
+        for (size_t j = 0; j < tokenized.seq_length; ++j) {
             if (j < results[i].len) {
-                if (j >= max_length) {
-                    // If the length exceeds max_length, cut it off
-                    tokenized.truncated[i] = true;
-                    break;
-                }
                 tokenized.input_ids[i][j] = results[i].token_ids[j];
-                // tokenized.token_type_ids[i][j] = 0;  // In this case, for simplicity, we set it to 0
+                // tokenized.token_type_ids[i][j] = 0;  // In this case, for simplicity, we set it to 0 // set by calloc
                 tokenized.attention_mask[i][j] = 1;  // 1 if token is exists
-            } else {
-                // tokenized.input_ids[i][j] = 0;  // Padding
-                // tokenized.token_type_ids[i][j] = 0;
-                // tokenized.attention_mask[i][j] = 0;
-            }
+            } 
+            // else {
+            //    tokenized.input_ids[i][j] = 0;  // Padding // set by calloc
+            //    tokenized.token_type_ids[i][j] = 0; // set by calloc
+            //    tokenized.attention_mask[i][j] = 0; // set by calloc
+            // }
         }
     }
 
@@ -104,36 +100,24 @@ TokenizedInput tokenize_input(TokenizerHandle tokenizer, const char* input, size
     int add_special_tokens = 1;
     tokenizers_encode(tokenizer, input, input_length, add_special_tokens, &result);
 
-    size_t seq_length = 0; // This will be the length of the longest sequence after trimming.
+    TokenizedInput tokenized;
     if (result.len > max_length) {
-        seq_length = max_length;
+        tokenized.seq_length = max_length;
+        tokenized.truncated = true;
     } else {
-        seq_length = result.len;
+        tokenized.seq_length = result.len;
+        tokenized.truncated = false;
     }
 
     // Mem alloc for tokenized data
-    TokenizedInput tokenized;
-    tokenized.input_ids = (int64_t*)calloc(seq_length, sizeof(int64_t));
-    tokenized.token_type_ids = (int64_t*)calloc(seq_length, sizeof(int64_t));
-    tokenized.attention_mask = (int64_t*)calloc(seq_length, sizeof(int64_t));
-    tokenized.seq_length = seq_length;
-    tokenized.truncated = false;
+    tokenized.input_ids = (int64_t*)calloc(tokenized.seq_length, sizeof(int64_t));
+    tokenized.token_type_ids = (int64_t*)calloc(tokenized.seq_length, sizeof(int64_t));
+    tokenized.attention_mask = (int64_t*)calloc(tokenized.seq_length, sizeof(int64_t));
 
-    for (size_t j = 0; j < seq_length; ++j) {
-        if (j < result.len) {
-            if (j >= max_length) {
-                // If the length exceeds max_length, cut it off
-                tokenized.truncated = true;
-                break;
-            }
-            tokenized.input_ids[j] = result.token_ids[j];
-            // tokenized.token_type_ids[j] = 0;  // In this case, for simplicity, we set it to 0
-            tokenized.attention_mask[j] = 1;  // 1 if token is exists
-        } else {
-            // tokenized.input_ids[j] = 0;  // Padding
-            // tokenized.token_type_ids[j] = 0;
-            // tokenized.attention_mask[j] = 0;
-        }
+    for (size_t j = 0; j < tokenized.seq_length; ++j) {
+        tokenized.input_ids[j] = result.token_ids[j];
+        // tokenized.token_type_ids[j] = 0;  // In this case, for simplicity, we set it to 0
+        tokenized.attention_mask[j] = 1;  // 1 if token is exists
     }
 
     tokenizers_free_encode_results(&result, 1);
