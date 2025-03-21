@@ -11,12 +11,16 @@
     #define GLICLASS_API
 #endif
 
+#ifdef USE_OPENVINO
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #include <stddef.h>
 #include <stdbool.h>
+#include <openvino/c/openvino.h>
 #include "onnxruntime_c_api.h"
 #include "tokenizers_c.h"
 
@@ -41,6 +45,16 @@ typedef struct GLiClassSession {
     OrtEnv* env;
     bool use_mutex;
 } GLiClassSession;
+
+#ifdef USE_OPENVINO
+#endif
+typedef struct GLiClassSessionOpenVino {
+    const GLiClassModelConfig* model_config;
+    TokenizerHandle tokenizer;
+    ov_core_t* core;
+    ov_compiled_model_t* model;
+    bool use_mutex;
+} GLiClassSessionOpenVino;
 
 // Struct to hold inference results
 typedef struct GLiClassResult {
@@ -109,6 +123,16 @@ GLICLASS_API GLiClassSession* gliclass_init_custom_ort(
     OrtSession* session
 );
 
+GLICLASS_API GLiClassSessionOpenVino* gliclass_init_openvino_runtime(
+    const char* model_path,
+    // const char* bin_path,
+    const char* model_config_path,
+    const char* tokenizer_path,
+    const int num_threads,
+    const char* device_type,
+    const bool use_mutex
+);
+
 /**
  * Perform classification on input text and labels
  * @param session Initialized session handle
@@ -124,6 +148,17 @@ GLICLASS_API GLiClassSession* gliclass_init_custom_ort(
  */
 GLICLASS_API bool gliclass_infer(
     GLiClassSession* session,
+    const GLiClassInferenceConfig* config,
+    const char* input_text,
+    const char* labels[],
+    const size_t num_labels,
+    GLiClassResult* out_results[],
+    size_t* out_num_results,
+    bool* truncated
+);
+
+bool gliclass_infer_openvino(
+    GLiClassSessionOpenVino* session,
     const GLiClassInferenceConfig* config,
     const char* input_text,
     const char* labels[],
@@ -174,6 +209,8 @@ GLICLASS_API void gliclass_free_results_batch(GLiClassResult** results, size_t* 
 GLICLASS_API void gliclass_cleanup(GLiClassSession* session);
 
 GLICLASS_API void gliclass_cleanup_custom_ort(GLiClassSession* session);
+
+GLICLASS_API void gliclass_cleanup_openvino(GLiClassSessionOpenVino* session);
 
 #ifdef __cplusplus
 }

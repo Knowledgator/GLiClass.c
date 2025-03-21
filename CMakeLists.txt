@@ -9,7 +9,9 @@ if (MSVC)
 else()
   set(CMAKE_C_STANDARD 11)
   set(CMAKE_C_STANDARD_REQUIRED ON)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fcommon")
 endif()
+
 
 # Include the headers
 include_directories(include)
@@ -93,19 +95,26 @@ if(BUILD_TARGET STREQUAL "CPU")
   if(NOT ONNXRUNTIME_LIB)
     message(FATAL_ERROR "CPU version of ONNXRuntime library not found. Please check the library paths or download them from official site:\n
                           https://github.com/microsoft/onnxruntime/releases.")
-  else()
-    message(STATUS "Using CPU version of ONNXRuntime")
   endif()
 endif()
 
-# Include directories for ONNXRuntime
-include_directories(
-  "${ONNXRUNTIME_PATH}/include/*"
-  "${ONNXRUNTIME_PATH}/include/onnxruntime"
-  "${ONNXRUNTIME_PATH}/include/onnxruntime/core/session"
+if(WIN32)
+  set(OPENVINO_PATH "C:/Program Files (x86)/Intel/openvino_2024.4.0/runtime" CACHE STRING "OpenVino runtime path")
+  set(OPENVINO_LIB_PATH ${OPENVINO_PATH}/lib/intel64/Release CACHE STRING "OpenVino runtime lib path")
+else()  
+  set(OPENVINO_PATH "/opt/intel/openvino_2024/runtime" CACHE STRING "OpenVino runtime path")
+  set(OPENVINO_LIB_PATH ${OPENVINO_PATH}/lib/intel64 CACHE STRING "OpenVino runtime lib path")
+endif()
+
+find_library(OPENVINO_LIB
+  NAMES openvino_c libopenvino_c
+  PATHS ${OPENVINO_LIB_PATH}
+  NO_DEFAULT_PATH
 )
 
-###########################################
+if(NOT OPENVINO_LIB)
+  message(FATAL_ERROR "OpenVino lib is not found at ${OPENVINO_LIB_PATH}")
+endif()
 
 # Path for tokenizers-cpp
 set(TOKENIZER_CPP_PATH "./tokenizers-cpp")
@@ -145,13 +154,15 @@ target_include_directories(GLiClass PUBLIC
               ${CMAKE_CURRENT_SOURCE_DIR}
               ${TOKENIZER_CPP_PATH}/include 
               ${ONNXRUNTIME_PATH}/include
+              ${OPENVINO_PATH}/include
               ${CJSON_PATH})
 
 # Link tokenizers-cpp libraries
 target_link_libraries(GLiClass 
               tokenizers_cpp 
               cjson 
-              ${ONNXRUNTIME_LIB} 
+              ${ONNXRUNTIME_LIB}
+              ${OPENVINO_LIB}
               OpenMP::OpenMP_C)
 
 # Install DLL and LIB files

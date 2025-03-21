@@ -2,7 +2,6 @@
 #include "onnxruntime_c_api.h"
 #include "GLiClass/gliclass_api.h"
 #include <openvino/c/openvino.h>
-#include <openvino/c/ov_core.h>
 #include <time.h>
 
 void list_devices() {
@@ -52,9 +51,6 @@ int main() {
 
     // Initializes the ONNX Runtime API
     if (!gliclass_initialize_ort_api()) return false;
-
-    fprintf(stderr, "OK!");
-    fflush(stderr);
 
     OrtEnv* ort_env = gliclass_create_ort_env("GLiClass");
     OrtSession* ort_session = gliclass_create_ort_session_openvino(ort_env, model_path, num_threads, "GPU");

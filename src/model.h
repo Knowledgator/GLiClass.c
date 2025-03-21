@@ -18,6 +18,10 @@ GLiClassModelConfig* initialize_model_config(const char* model_config_path);
  */
 int prepare_input_tensor(TokenizedInput* tokenized, OrtValue** input_ids_tensor, OrtValue** attention_mask_tensor);
 
+int prepare_input_tensor_openvino(
+    TokenizedInput* tokenized, ov_tensor_t** input_ids_tensor, ov_tensor_t** attention_mask_tensor
+);
+
 /**
  * Prepares input tensors for the ONNX model using tokenized input data.
  * 

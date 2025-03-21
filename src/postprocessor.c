@@ -201,12 +201,6 @@ void process_output_tensor(
         return;
     }
 
-    // Calculate the total number of elements
-    size_t total_elements = 1;
-    for (size_t i = 0; i < num_dims; ++i) {
-        total_elements *= dims[i];
-    }
-
     // Get a pointer to the tensor data
     float* output_data = NULL;
     status = g_ort->GetTensorMutableData(output_tensor, (void**)&output_data);
@@ -248,6 +242,58 @@ void process_output_tensor(
     if (type_info) g_ort->ReleaseTensorTypeAndShapeInfo(type_info);
     if (status) g_ort->ReleaseStatus(status);
 }
+
+
+void process_output_tensor_openvino(
+    GLiClassSessionOpenVino* session,
+    const GLiClassInferenceConfig* config,
+    ov_tensor_t* output_tensor,
+    const char* labels[],
+    const size_t num_labels,
+    GLiClassResult out_results[],
+    size_t* out_num_results
+) {
+    ov_shape_t output_shape = {0};
+    ov_status_e status = ov_tensor_get_shape(output_tensor, &output_shape);
+    if (status != OK) return;
+
+    fprintf(stdout, "OUTPUT TENSOR SHAPE EXISTS! %ld/%ld\n", output_shape.rank, output_shape.dims[0]);
+    fflush(stdout);
+
+    float* output_data = NULL;
+    status = ov_tensor_data(output_tensor, (void*)&output_data);
+    if (status != OK) {
+        ov_shape_free(&output_shape);
+        return;
+    }
+
+    int64_t num_classes = output_shape.dims[1];
+    size_t text_id = 0;
+    if (strcmp(config->classification_type, "multi-label") == 0) {    
+        process_multi_label(
+            output_data,
+            num_classes,
+            labels,
+            num_labels,
+            config->threshold,
+            out_results,
+            out_num_results
+        );
+    } else if (strcmp(config->classification_type, "single-label") == 0){
+        process_single_label(
+            output_data,
+            num_classes,
+            labels,
+            num_labels,
+            text_id,
+            out_results,
+            out_num_results
+        );
+    }
+
+    ov_shape_free(&output_shape);
+}
+
 
 void process_output_tensor_batch(
     GLiClassSession* session,
@@ -296,12 +342,6 @@ void process_output_tensor_batch(
             g_ort->ReleaseStatus(status);
         }
         return;
-    }
-
-    // Calculate the total number of elements
-    size_t total_elements = 1;
-    for (size_t i = 0; i < num_dims; ++i) {
-        total_elements *= dims[i];
     }
 
     // Get a pointer to the tensor data

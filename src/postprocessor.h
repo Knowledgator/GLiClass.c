@@ -24,6 +24,16 @@ void process_output_tensor(
     size_t* out_num_results
 );
 
+void process_output_tensor_openvino(
+    GLiClassSessionOpenVino* session,
+    const GLiClassInferenceConfig* config,
+    ov_tensor_t* output_tensor,
+    const char* labels[],
+    const size_t num_labels,
+    GLiClassResult out_results[],
+    size_t* out_num_results
+);
+
 /**
  * Processes the output tensor (logits) and prints the predicted labels and scores based on the given classification type (multi-label or single-label).
  * 

@@ -102,6 +102,27 @@ int prepare_input_tensor(TokenizedInput* tokenized, OrtValue** input_ids_tensor,
 }
 
 
+int prepare_input_tensor_openvino(TokenizedInput* tokenized, ov_tensor_t** input_ids_tensor, ov_tensor_t** attention_mask_tensor) {
+    ov_shape_t input_shape = {0};
+    int64_t dims[] = {1, tokenized->seq_length};
+    ov_shape_create(2, dims, &input_shape);
+    ov_element_type_e input_type = I64;
+    ov_status_e status = ov_tensor_create_from_host_ptr(input_type, input_shape, tokenized->input_ids, input_ids_tensor);
+    if (status != OK) {
+        fprintf(stderr, "Unable to allocate intput_ids_tensor");
+        return -1;
+    }
+    ov_tensor_create_from_host_ptr(input_type, input_shape, tokenized->attention_mask, attention_mask_tensor);
+    if (status != OK) {
+        fprintf(stderr, "Unable to allocate attention_mask_tensor");
+        ov_tensor_free(*input_ids_tensor);
+        return -1;
+    }
+    ov_shape_free(&input_shape);
+    return 0;
+}
+
+
 int prepare_input_tensors(TokenizedInputs* tokenized, OrtValue** input_ids_tensor, OrtValue** attention_mask_tensor) {
     // preparing input_ids
     int64_t* input_ids_data = flatten_int_array(tokenized->input_ids, tokenized->batch_size, tokenized->seq_length);
