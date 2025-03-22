@@ -41,11 +41,6 @@ GLiClassSessionOpenVino* gliclass_init_openvino_runtime(
         return NULL;
     }
 
-    if (num_threads == 0) {
-        fprintf(stderr, "num_threads shouldn't equal zero");
-        return false;
-    }
-
     session->use_mutex = use_mutex;
     if (session->use_mutex) {
         // Initialize queue mutex
@@ -85,7 +80,7 @@ GLiClassSessionOpenVino* gliclass_init_openvino_runtime(
     char threads[3];
     snprintf(threads, 3, "%d", num_threads);
     session->model = NULL;
-    if (num_threads > 0) {
+    if (num_threads > 0 && strcmp(device_type, "CPU") != 0) {
         status = ov_core_compile_model_from_file(
             session->core, model_path, device_type, 4, &session->model,
             ov_property_key_hint_performance_mode, "LATENCY",
@@ -100,7 +95,7 @@ GLiClassSessionOpenVino* gliclass_init_openvino_runtime(
 
     if (status != OK) {
         const char* e = ov_get_error_info(status);
-        fprintf(stderr, "Unable to compile model: %s\n", e);
+        fprintf(stderr, "Unable to compile model: %s: %s\n", e, ov_get_last_err_msg());
         gliclass_cleanup_openvino(session);
         return NULL;
     }
