@@ -23,10 +23,10 @@ bool gliclass_create_inference_config(
     } else if (threshold < 0 && threshold > 1) {
         fprintf(stderr, template, "threshold should be in range 0 ... 1");
         return false;
-    } else if (!(
-        strcmp(classification_type, "multi-label") 
-        || strcmp(classification_type, "single-label")
-    )) {
+    } else if (
+        strcmp(classification_type, "multi-label") != 0
+        && strcmp(classification_type, "single-label") != 0
+    ) {
         fprintf(stderr, template, "classification_type should be equal to 'multi-label' or 'single-label'");
         return false;
     }
