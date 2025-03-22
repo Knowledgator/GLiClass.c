@@ -2,11 +2,8 @@
 #define MODEL_H
 
 #include <stddef.h>
-#include "onnxruntime_c_api.h"
-#include "GLiClass/gliclass_api.h"
-#include "tokenizer.h"
-
-GLiClassModelConfig* initialize_model_config(const char* model_config_path);
+#include "GLiClass/gliclass_ort.h"
+#include "../tokenizer.h"
 
 /**
  * Prepares input tensors for the ONNX model using tokenized input data.
@@ -17,10 +14,6 @@ GLiClassModelConfig* initialize_model_config(const char* model_config_path);
  * @return 0 if successful, -1 if an error occurs during tensor preparation.
  */
 int prepare_input_tensor(TokenizedInput* tokenized, OrtValue** input_ids_tensor, OrtValue** attention_mask_tensor);
-
-int prepare_input_tensor_openvino(
-    TokenizedInput* tokenized, ov_tensor_t** input_ids_tensor, ov_tensor_t** attention_mask_tensor
-);
 
 /**
  * Prepares input tensors for the ONNX model using tokenized input data.

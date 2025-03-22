@@ -1,11 +1,8 @@
 #ifndef PARALLEL_PROCESSOR_H
 #define PARALLEL_PROCESSOR_H
 
-#include <stdio.h>
-#include <stdbool.h>
-#include "onnxruntime_c_api.h"
-#include "GLiClass/gliclass_api.h"
-#include "tokenizers_c.h"
+#include "GLiClass/gliclass_common.h"
+#include "GLiClass/gliclass_ort.h"
 
 /**
  * @brief Preprocesses a batch of texts and labels in parallel.

@@ -1,7 +1,6 @@
 #include "parallel_processor.h"
 
-#include <omp.h>
-#include "preprocessor.h"
+#include "../preprocessor.h"
 #include "postprocessor.h"
 #include "model.h"
 
@@ -41,7 +40,7 @@ void parallel_preprocess(
 
         // Prepare tokens
         const char** prepared_inputs = prepare_inputs(
-            session,
+            session->model_config,
             config,
             batch_texts,
             batch_size,

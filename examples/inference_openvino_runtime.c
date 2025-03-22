@@ -100,6 +100,5 @@ int main() {
     gliclass_free_results(results, num_results);
     
     gliclass_cleanup_openvino(session);
-    fprintf(stdout, "\nEND\n");
     return 0;
 }

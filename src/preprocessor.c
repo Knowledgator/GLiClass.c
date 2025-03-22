@@ -7,7 +7,7 @@
 #include <stdbool.h>
 
 const char** prepare_inputs(
-    GLiClassSession* session,
+    GLiClassModelConfig* model_config,
     const GLiClassInferenceConfig* config,
     const char* texts[], 
     const size_t num_texts,
@@ -24,9 +24,9 @@ const char** prepare_inputs(
 
     for (size_t i = 0; i < num_texts; ++i) {
         if (same_labels){
-            inputs[i] = prepare_input(texts[i], labels[0], num_labels[0], session->model_config->prompt_first, config->add_prefix_space);
+            inputs[i] = prepare_input(texts[i], labels[0], num_labels[0], model_config->prompt_first, config->add_prefix_space);
         } else {
-            inputs[i] = prepare_input(texts[i], labels[i], num_labels[i], session->model_config->prompt_first, config->add_prefix_space);
+            inputs[i] = prepare_input(texts[i], labels[i], num_labels[i], model_config->prompt_first, config->add_prefix_space);
         }
 
         if (!inputs[i]) {

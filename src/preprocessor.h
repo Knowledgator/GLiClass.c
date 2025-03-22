@@ -3,7 +3,7 @@
 
 #include <stddef.h>
 #include <stdbool.h>
-#include "GLiClass/gliclass_api.h"
+#include "GLiClass/gliclass_common.h"
 
 /**
  * Prepares inputs for further processing by combining texts with their corresponding labels.
@@ -20,7 +20,7 @@
  *         The caller is responsible for freeing the memory.
  */
 const char** prepare_inputs(
-    GLiClassSession* session,
+    GLiClassModelConfig* model_config,
     const GLiClassInferenceConfig* config,
     const char* texts[], 
     const size_t num_texts,
