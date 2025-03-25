@@ -46,7 +46,7 @@ int main() {
 
     GLiClassInferenceConfig config;
     gliclass_create_inference_config(
-        8, 2048, 0.5, "multi-label", true, &config
+        8, 10, 2048, 0.5, "multi-label", true, &config
     );
 
     // Initialize session (model setup)
@@ -69,8 +69,8 @@ int main() {
     const size_t num_labels = 4;
 
     GLiClassResult* results = NULL;
+    GLiClassTokensInfo info;
     size_t num_results = 0;
-    bool truncated = false;
     
     double time = (double)clock() / CLOCKS_PER_SEC;
     bool ok = gliclass_infer_openvino(
@@ -81,7 +81,7 @@ int main() {
         num_labels, 
         &results,
         &num_results,
-        &truncated
+        &info
     );
     time = (double)clock() / CLOCKS_PER_SEC - time;
     fprintf(stdout, "Elapsed: %f s\n", time);
@@ -93,7 +93,8 @@ int main() {
     }
     
     fprintf(stdout, "\nText: %s\n", text);
-    fprintf(stdout, "\nTruncated: %s\n", truncated ? "true": "false");
+    fprintf(stdout, "\nTruncated: %s\n", info.truncated ? "true": "false");
+    fprintf(stdout, "\nProcessed tokens: %ld\n", info.tokens_num);
     for (size_t i = 0; i < num_results; i++) {
         fprintf(stdout, "Label_%ld: %s, score: %f\n", i, results[i].label, results[i].score);
     }

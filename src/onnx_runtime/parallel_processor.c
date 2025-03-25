@@ -52,6 +52,7 @@ void parallel_preprocess(
             session->tokenizer, 
             (const char**)prepared_inputs, 
             batch_size,
+            config->min_length,
             config->max_length
         );
         *truncated = tokenized.truncated;

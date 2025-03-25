@@ -7,7 +7,7 @@ int main() {
     const char* tokenizer_path = "./tokenizer/tokenizer.json";
     GLiClassInferenceConfig config;
     gliclass_create_inference_config(
-        8, 2048, 0.5, "multi-label", true, &config
+        8, 0, 2048, 0.5, "multi-label", true, &config
     );
 
     // Initialize session (model setup)

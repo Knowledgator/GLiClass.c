@@ -111,7 +111,7 @@ bool gliclass_infer_openvino(
     const size_t num_labels,
     GLiClassResult* out_results[],
     size_t* out_num_results,
-    bool* truncated
+    GLiClassTokensInfo* info
 ) {
     if (!session || !input_text || !labels || num_labels == 0) {
         fprintf(stderr, "Inputs have invalid value!\n");
@@ -134,10 +134,19 @@ bool gliclass_infer_openvino(
 
     TokenizedInput tokenized = tokenize_input(
         session->tokenizer, 
-        (const char*)input, 
+        (const char*)input,
+        config->min_length,
         config->max_length
     );
-    *truncated = tokenized.truncated;
+    
+    if (info) {
+        info->truncated = tokenized.truncated;
+        info->tokens_num = tokenized.seq_length;
+    }
+
+    if (tokenized.seq_length == 0) {
+        return true;
+    }
 
     ov_tensor_t* input_ids_tensor = NULL;
     ov_tensor_t* attention_mask_tensor = NULL;

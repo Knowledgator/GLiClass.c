@@ -12,7 +12,7 @@ int main() {
     int device_id = 0;
     GLiClassInferenceConfig config;
     gliclass_create_inference_config(
-        8, 2048, 0.5, "multi-label", true, &config
+        8, 0, 2048, 0.5, "multi-label", true, &config
     );
 
     // Initializes the ONNX Runtime API
@@ -68,7 +68,7 @@ int main() {
         &results,
         &results_shape,
         &results_shape_size,
-        &truncated
+        NULL
     );
     time = (double)clock() / CLOCKS_PER_SEC - time;
     fprintf(stdout, "Elapsed: %f s\n", time);
@@ -81,7 +81,6 @@ int main() {
     
     for (size_t i = 0; i < results_shape_size; i++) {
         fprintf(stdout, "\nText_%ld/%ld: %s\n", i, results_shape_size, texts[i]);
-        fprintf(stdout, "\nTruncated: %s\n", truncated[i] ? "true": "false");
         for (size_t j = 0; j < results_shape[i]; j++) {
             fprintf(stdout, "Label_%ld: %s, score: %f\n", j, results[i][j].label, results[i][j].score);
         }      

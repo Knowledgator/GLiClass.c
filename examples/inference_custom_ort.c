@@ -38,7 +38,7 @@ int main() {
     size_t num_threads = 8;
 
     GLiClassInferenceConfig config; 
-    gliclass_create_inference_config(8, 2048, 0.5, "multi-label", false, &config);
+    gliclass_create_inference_config(8, 0, 2048, 0.5, "multi-label", false, &config);
 
     // Initializes the ONNX Runtime API
     if (!gliclass_initialize_ort_api()) return false;

@@ -46,7 +46,7 @@ int main() {
 
     GLiClassInferenceConfig config;
     gliclass_create_inference_config(
-        8, 2048, 0.5, "multi-label", true, &config
+        8, 0, 2048, 0.5, "multi-label", true, &config
     );
 
     // Initializes the ONNX Runtime API
@@ -74,7 +74,6 @@ int main() {
 
     GLiClassResult* results = NULL;
     size_t num_results = 0;
-    bool truncated = false;
     
     double time = (double)clock() / CLOCKS_PER_SEC;
     bool ok = gliclass_infer(
@@ -85,7 +84,7 @@ int main() {
         num_labels, 
         &results,
         &num_results,
-        &truncated
+        NULL
     );
     time = (double)clock() / CLOCKS_PER_SEC - time;
     fprintf(stdout, "Elapsed: %f s\n", time);
@@ -97,7 +96,6 @@ int main() {
     }
     
     fprintf(stdout, "\nText: %s\n", text);
-    fprintf(stdout, "\nTruncated: %s\n", truncated ? "true": "false");
     for (size_t i = 0; i < num_results; i++) {
         fprintf(stdout, "Label_%ld: %s, score: %f\n", i, results[i].label, results[i].score);
     }

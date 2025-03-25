@@ -8,7 +8,7 @@ int main() {
 
     GLiClassInferenceConfig config;
     gliclass_create_inference_config(
-        8, 2048, 0.5, "multi-label", true, &config
+        8, 0, 2048, 0.5, "multi-label", true, &config
     );
 
     // Initialize session (model setup)
@@ -69,7 +69,6 @@ int main() {
     for (size_t t = 0; t < num_texts; ++t) {
         GLiClassResult* results = NULL;
         size_t num_results = 0;
-        bool truncated = false;
 
         bool ok = gliclass_infer(
             session,
@@ -79,7 +78,7 @@ int main() {
             num_labels,
             &results,
             &num_results,
-            &truncated
+            NULL
         );
 
         if (!ok) {
@@ -90,7 +89,6 @@ int main() {
 
         // Print results
         printf("\nText %ld: %s\n", t + 1, texts[t]);
-        fprintf(stdout, "\nTruncated: %s\n", truncated ? "true": "false");
         printf("num_results: %ld\n", num_results);
         for (size_t i = 0; i < num_results; ++i) {
             printf("Label_%ld: %s, Score: %f\n", i, results[i].label, results[i].score);

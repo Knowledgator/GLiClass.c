@@ -17,8 +17,9 @@
 TokenizedInputs tokenize_inputs(
     TokenizerHandle tokenizer, 
     const char** inputs, 
-    size_t num_texts, 
-    size_t max_length
+    const size_t num_texts,
+    const size_t min_length,
+    const size_t max_length
 ) {
     TokenizerEncodeResult* results = (
         (TokenizerEncodeResult*)calloc(num_texts, sizeof(TokenizerEncodeResult))
@@ -55,13 +56,17 @@ TokenizedInputs tokenize_inputs(
     tokenized.batch_size = num_texts;
     tokenized.seq_length = 0; // This will be the length of the longest sequence after trimming.
     for (size_t i = 0; i < num_texts; ++i) {
-        if (results[i].len > max_length) {
+        if (results[i].len < min_length) {
+            seq_lengths[i] = 0;
+            tokenized.truncated[i] = true;
+        } else if (results[i].len > max_length) {
             seq_lengths[i] = max_length;
             tokenized.truncated[i] = true;
         } else {
             seq_lengths[i] = results[i].len;
             // tokenized.truncated[i] = false; // already set by calloc 
         }
+
         if (seq_lengths[i] > tokenized.seq_length) {
             tokenized.seq_length = seq_lengths[i];
         }
@@ -93,7 +98,12 @@ TokenizedInputs tokenize_inputs(
     return tokenized;
 }
 
-TokenizedInput tokenize_input(TokenizerHandle tokenizer, const char* input, size_t max_length) {
+TokenizedInput tokenize_input(
+    TokenizerHandle tokenizer, 
+    const char* input,
+    const size_t min_length,
+    const size_t max_length
+) {
     TokenizerEncodeResult result;
     size_t input_length = strlen(input);
 
@@ -101,7 +111,12 @@ TokenizedInput tokenize_input(TokenizerHandle tokenizer, const char* input, size
     tokenizers_encode(tokenizer, input, input_length, add_special_tokens, &result);
 
     TokenizedInput tokenized;
-    if (result.len > max_length) {
+    if (result.len < min_length) {
+        tokenized.seq_length = 0;
+        tokenized.truncated = true;
+        tokenizers_free_encode_results(&result, 1);
+        return tokenized;
+    } else if (result.len > max_length) {
         tokenized.seq_length = max_length;
         tokenized.truncated = true;
     } else {

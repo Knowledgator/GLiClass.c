@@ -14,7 +14,6 @@ static bool run_inference_with_config(
     // Run inference
     GLiClassResult* results = NULL;
     size_t num_results = 0;
-    bool truncated = false;
 
     bool ok = gliclass_infer(
         session,
@@ -24,7 +23,7 @@ static bool run_inference_with_config(
         num_labels,
         &results,
         &num_results,
-        &truncated
+        NULL
     );
 
     if (!ok) {
@@ -34,7 +33,6 @@ static bool run_inference_with_config(
 
     // Output results
     printf("\nText: %s\n", text);
-    fprintf(stdout, "\nTruncated: %s\n", truncated ? "true": "false");
     for (size_t i = 0; i < num_results; i++) {
         printf("Label_%ld: %s, score: %.4f\n", i, results[i].label, results[i].score);
     }
@@ -82,9 +80,9 @@ int main() {
 
     // Array of different InferenceConfig settings to test
     GLiClassInferenceConfig configs[] = {
-        {8, 2048, 0.5, "multi-label", false},
-        {8, 2048, 0.1, "multi-label", false},
-        {8, 2048, 0.01, "multi-label", false}
+        {8, 0, 2048, 0.5, "multi-label", false},
+        {8, 0, 2048, 0.1, "multi-label", false},
+        {8, 0, 2048, 0.01, "multi-label", false}
     };
 
     const size_t num_configs = sizeof(configs) / sizeof(configs[0]);

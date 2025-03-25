@@ -7,7 +7,7 @@ int main() {
     const char* tokenizer_path = "./tokenizer/tokenizer.json";
     GLiClassInferenceConfig config;
     gliclass_create_inference_config(
-        8, 2048, 0.5, "multi-label", true, &config
+        8, 0, 2048, 0.5, "multi-label", true, &config
     );
 
     // Initialize session (model setup)
@@ -29,7 +29,6 @@ int main() {
     
     GLiClassResult* results = NULL;
     size_t num_results = 0;
-    bool truncated = false;
     
     bool ok = gliclass_infer(
         session,
@@ -39,7 +38,7 @@ int main() {
         num_labels, 
         &results,
         &num_results,
-        &truncated
+        NULL
     );
 
     if (!ok) {
@@ -49,7 +48,6 @@ int main() {
     }
     
     fprintf(stdout, "\nText: %s\n", text);
-    fprintf(stdout, "\nTruncated: %s\n", truncated ? "true": "false");
     for (size_t i = 0; i < num_results; i++) {
         fprintf(stdout, "Label_%ld: %s, score: %f\n", i, results[i].label, results[i].score);
     }

@@ -329,7 +329,7 @@ bool gliclass_infer(
     const size_t num_labels,
     GLiClassResult* out_results[],
     size_t* out_num_results,
-    bool* truncated
+    GLiClassTokensInfo* info
 ) {
     if (!session || !input_text || !labels || num_labels == 0) {
         fprintf(stderr, "Inputs have invalid value!");
@@ -352,10 +352,19 @@ bool gliclass_infer(
 
     TokenizedInput tokenized = tokenize_input(
         session->tokenizer, 
-        (const char*)input, 
+        (const char*)input,
+        config->min_length,
         config->max_length
     );
-    *truncated = tokenized.truncated;
+    
+    if (info) {
+        info->truncated = tokenized.truncated;
+        info->tokens_num = tokenized.seq_length;
+    }
+
+    if (tokenized.seq_length == 0) {
+        return true;
+    }
 
     OrtValue* input_ids_tensor = NULL;
     OrtValue* attention_mask_tensor = NULL;
@@ -399,7 +408,7 @@ bool gliclass_infer(
 }
 
 
-bool gliclass_infer_batch(
+bool gliclass_infer_batch( // TODO: add quick exit on empty batches
     GLiClassSession* session,
     const GLiClassInferenceConfig* config,
     const char* input_texts[],

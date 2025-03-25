@@ -34,7 +34,7 @@ GLICLASS_API bool gliclass_infer_openvino(
     const size_t num_labels,
     GLiClassResult* out_results[],
     size_t* out_num_results,
-    bool* truncated
+    GLiClassTokensInfo* info
 );
 
 GLICLASS_API void gliclass_cleanup_openvino(GLiClassSessionOpenVino* session);

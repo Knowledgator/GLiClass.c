@@ -46,7 +46,8 @@ typedef struct {
 TokenizedInputs tokenize_inputs(
     TokenizerHandle tokenizer, 
     const char* inputs[], 
-    const size_t num_texts, 
+    const size_t num_texts,
+    const size_t min_length, 
     const size_t max_length
 );
 
@@ -62,7 +63,8 @@ TokenizedInputs tokenize_inputs(
  */
 TokenizedInput tokenize_input(
     TokenizerHandle tokenizer, 
-    const char* input, 
+    const char* input,
+    const size_t min_length,
     const size_t max_length
 );
 
