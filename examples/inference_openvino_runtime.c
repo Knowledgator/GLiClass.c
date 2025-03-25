@@ -1,7 +1,5 @@
 #include <stdio.h>
-#include "onnxruntime_c_api.h"
 #include "GLiClass/gliclass_api.h"
-#include <openvino/c/openvino.h>
 #include <time.h>
 
 void list_devices() {
@@ -37,6 +35,7 @@ int main() {
     ov_version_t version;
     ov_get_openvino_version(&version);
     fprintf(stdout, "%s\n", version.buildNumber);
+    ov_version_free(&version);
 
     const char* model_path = "./onnx/model.onnx";
     const char* model_config_path = "./onnx/config.json";
