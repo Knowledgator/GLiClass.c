@@ -1,6 +1,8 @@
 #include "GLiClass/gliclass_common.h"
 
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 
 bool gliclass_create_inference_config(
     size_t batch_size,

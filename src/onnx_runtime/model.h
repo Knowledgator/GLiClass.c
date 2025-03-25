@@ -1,5 +1,5 @@
-#ifndef MODEL_H
-#define MODEL_H
+#ifndef ONNX_MODEL_H
+#define ONNX_MODEL_H
 
 #include <stddef.h>
 #include "GLiClass/gliclass_ort.h"
@@ -36,4 +36,4 @@ int prepare_input_tensors(TokenizedInputs* tokenized, OrtValue** input_ids_tenso
  */
 OrtValue* run_inference(OrtSession* session, OrtValue* input_ids_tensor, OrtValue* attention_mask_tensor);
 
-#endif // MODEL_H
+#endif // ONNX_MODEL_H

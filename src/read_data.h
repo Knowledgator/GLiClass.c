@@ -3,7 +3,7 @@
 
 #include <stddef.h>
 #include <stdbool.h>
-#include "GLiClass/gliclass_api.h"
+#include "GLiClass/gliclass_common.h"
 
 /**
  * Reads the entire content of a file and returns it as a string.

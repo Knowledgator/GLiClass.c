@@ -1,7 +1,6 @@
-#ifndef MODEL_H
-#define MODEL_H
+#ifndef OPENVINO_MODEL_H
+#define OPENVINO_MODEL_H
 
-#include <stddef.h>
 #include "GLiClass/gliclass_ov.h"
 #include "../tokenizer.h"
 
@@ -22,4 +21,4 @@ ov_tensor_t* run_inference_openvino(
     ov_compiled_model_t* model, ov_tensor_t* input_ids_tensor, ov_tensor_t* attention_mask_tensor
 );
 
-#endif // MODEL_H
+#endif // OPENVINO_MODEL_H

@@ -1,7 +1,6 @@
-#ifndef POSTPROCESSOR_H
-#define POSTPROCESSOR_H
+#ifndef ONNX_POSTPROCESSOR_H
+#define ONNX_POSTPROCESSOR_H
 
-#include <stdbool.h>
 #include "GLiClass/gliclass_ort.h"
 
 /**
@@ -47,4 +46,4 @@ void process_output_tensor_batch(
     size_t out_num_results[]
 );
 
-#endif // POSTPROCESSOR_H
+#endif // ONNX_POSTPROCESSOR_H

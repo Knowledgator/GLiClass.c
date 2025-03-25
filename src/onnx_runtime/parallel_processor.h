@@ -1,5 +1,5 @@
-#ifndef PARALLEL_PROCESSOR_H
-#define PARALLEL_PROCESSOR_H
+#ifndef ONNX_PARALLEL_PROCESSOR_H
+#define ONNX_PARALLEL_PROCESSOR_H
 
 #include "GLiClass/gliclass_common.h"
 #include "GLiClass/gliclass_ort.h"
@@ -65,4 +65,4 @@ void parallel_postprocess(
     size_t out_num_results[]
 );
 
-#endif // PARALLEL_PROCESSOR_H
+#endif // ONNX_PARALLEL_PROCESSOR_H

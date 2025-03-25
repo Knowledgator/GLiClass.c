@@ -23,9 +23,9 @@
 
 // Mutex declarations
 #ifndef _WIN32
-pthread_mutex_t queue_mutex;
+static pthread_mutex_t queue_mutex;
 #else
-HANDLE queue_mutex;
+static HANDLE queue_mutex;
 #endif
 
 const OrtApi* g_ort = NULL;

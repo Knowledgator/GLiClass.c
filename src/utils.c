@@ -1,6 +1,8 @@
 #include "utils.h"
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
 #include "read_data.h"
 
 GLiClassModelConfig* initialize_model_config(const char* model_config_path) {
