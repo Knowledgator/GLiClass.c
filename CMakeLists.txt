@@ -9,6 +9,7 @@ if (MSVC)
 else()
   set(CMAKE_C_STANDARD 11)
   set(CMAKE_C_STANDARD_REQUIRED ON)
+  add_compile_options(-fcommon)
 endif()
 
 
@@ -51,8 +52,8 @@ if(WIN32)
   set(OPENVINO_PATH "C:/Program Files (x86)/Intel/openvino_2024.4.0/runtime" CACHE STRING "OpenVino runtime path")
   set(OPENVINO_LIB_PATH ${OPENVINO_PATH}/lib/intel64/Release CACHE STRING "OpenVino runtime lib path")
 else()  
-  set(OPENVINO_PATH "/opt/intel/openvino_2024/runtime" CACHE STRING "OpenVino runtime path")
-  set(OPENVINO_LIB_PATH ${OPENVINO_PATH}/lib/intel64 CACHE STRING "OpenVino runtime lib path")
+  set(OPENVINO_PATH "" CACHE STRING "OpenVino runtime path")
+  set(OPENVINO_LIB_PATH ${OPENVINO_PATH}/lib/ CACHE STRING "OpenVino runtime lib path")
 endif()
 
 # If using ONNX runtime
@@ -117,12 +118,17 @@ endif()
 
 
 if(OPENVINO)
-  find_library(OPENVINO_LIB
-    NAMES openvino_c libopenvino_c
-    PATHS ${OPENVINO_LIB_PATH}
-    NO_DEFAULT_PATH
-  )
-  link_directories(${OPENVINO_LIB_PATH})
+  if (${OPENVINO_PATH} STREQUAL "")
+    find_library(OPENVINO_LIB
+      NAMES openvino_c libopenvino_c
+    )
+  else()    
+    find_library(OPENVINO_LIB
+      NAMES openvino_c libopenvino_c
+      PATHS ${OPENVINO_LIB_PATH}
+      NO_DEFAULT_PATH
+    )
+  endif()
 
   if(NOT OPENVINO_LIB)
     message(FATAL_ERROR "OpenVino lib is not found at ${OPENVINO_LIB_PATH}")
@@ -210,7 +216,7 @@ target_include_directories(GLiClass PUBLIC
               ${CJSON_PATH})
 
 # Link tokenizers-cpp libraries
-target_link_libraries(GLiClass 
+target_link_libraries(GLiClass
               tokenizers_cpp 
               cjson
               OpenMP::OpenMP_C)
