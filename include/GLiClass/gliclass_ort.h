@@ -10,13 +10,10 @@ extern "C" {
 
 GLICLASS_API extern const OrtApi* g_ort;
 
-typedef struct GLiClassSession {
-    const GLiClassModelConfig* model_config;
-    TokenizerHandle tokenizer;
+typedef struct GLiClassSessionORT {
     OrtSession* session;
     OrtEnv* env;
-    bool use_mutex;
-} GLiClassSession;
+} GLiClassSessionORT;
 
 GLICLASS_API const OrtApi* gliclass_initialize_ort_api();
 
@@ -25,9 +22,9 @@ GLICLASS_API const OrtApi* gliclass_initialize_ort_api();
  * @param model_path Path to ONNX model
  * @param tokenizer_path Path to tokenizer file
  * @param num_threads Number of threads
- * @return GLiClassSession handle, or NULL on error
+ * @return GLiClassSessionORT handle, or NULL on error
  */
-GLICLASS_API GLiClassSession* gliclass_init(
+GLICLASS_API GLiClassSessionORT* gliclass_init(
     const char* model_path, 
     const char* model_config_path,
     const char* tokenizer_path,
@@ -61,9 +58,9 @@ GLICLASS_API OrtSession* gliclass_create_ort_session_cuda(
  * @param model_path Path to ONNX model
  * @param tokenizer_path Path to tokenizer file
  * @param num_threads Number of threads
- * @return GLiClassSession handle, or NULL on error
+ * @return GLiClassSessionORT handle, or NULL on error
  */
-GLICLASS_API GLiClassSession* gliclass_init_custom_ort(
+GLICLASS_API GLiClassSessionORT* gliclass_init_custom_ort(
     const char* model_config_path,
     const char* tokenizer_path,
     const bool use_mutex,
@@ -84,7 +81,7 @@ GLICLASS_API GLiClassSession* gliclass_init_custom_ort(
  * @return true on success, false on error
  */
 GLICLASS_API bool gliclass_infer(
-    GLiClassSession* session,
+    GLiClassSessionORT* session,
     const GLiClassInferenceConfig* config,
     const char* input_text,
     const char* labels[],
@@ -110,7 +107,7 @@ GLICLASS_API bool gliclass_infer(
  * @return true on success, false on error
  */
 GLICLASS_API bool gliclass_infer_batch(
-    GLiClassSession* session,
+    GLiClassSessionORT* session,
     const GLiClassInferenceConfig* config,
     const char* input_texts[],
     const size_t num_texts,
@@ -126,9 +123,9 @@ GLICLASS_API bool gliclass_infer_batch(
 /**
  * Cleanup session
  */
-GLICLASS_API void gliclass_cleanup(GLiClassSession* session);
+GLICLASS_API void gliclass_cleanup(GLiClassSessionORT* session);
 
-GLICLASS_API void gliclass_cleanup_custom_ort(GLiClassSession* session);
+GLICLASS_API void gliclass_cleanup_custom_ort(GLiClassSessionORT* session);
 
 #ifdef __cplusplus
 }

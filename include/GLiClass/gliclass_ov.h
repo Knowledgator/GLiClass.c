@@ -9,11 +9,8 @@ extern "C" {
 #include <openvino/c/openvino.h>
 
 typedef struct GLiClassSessionOpenVino {
-    const GLiClassModelConfig* model_config;
-    TokenizerHandle tokenizer;
     ov_core_t* core;
     ov_compiled_model_t* model;
-    bool use_mutex;
 } GLiClassSessionOpenVino;
 
 GLICLASS_API GLiClassSessionOpenVino* gliclass_init_openvino_runtime(

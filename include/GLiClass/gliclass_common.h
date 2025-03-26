@@ -15,6 +15,7 @@
 extern "C" {
 #endif
     
+#include <stdio.h>
 #include <stddef.h>
 #include <stdbool.h>
 #ifdef _WIN32
@@ -23,9 +24,35 @@ extern "C" {
 #endif
 #include "tokenizers_c.h"
 
+typedef enum GLiClassStatus {
+    OK = 0,
+    MEMORY_ERROR,
+    LOGICAL_ERROR,
+    PROVIDER_ERROR,
+    FILE_ERROR
+} GLiClassStatus;
+
+typedef enum GLiClassProvider {
+    ONNX,
+    ONNX_OPENVINO,
+    OPENVINO
+} GLiClassProvider;
+
+typedef enum GLiClassDevice {
+    GPU,
+    CPU
+} GLiClassDevice;
+
 typedef struct GLiClassModelConfig {
     bool prompt_first;
 } GLiClassModelConfig;
+
+typedef struct GLiClassSession {
+    const GLiClassModelConfig* model_config;
+    TokenizerHandle tokenizer;
+    void* provider_session;
+    bool use_mutex;
+} GLiClassSession;
 
 typedef struct GLiClassInferenceConfig {
     /** Used in batch inference. Specifies max batch size */
@@ -83,6 +110,8 @@ GLICLASS_API bool gliclass_create_inference_config(
 GLICLASS_API void gliclass_free_results(GLiClassResult* results, size_t num_results);
 
 GLICLASS_API void gliclass_free_results_batch(GLiClassResult** results, size_t* num_results, size_t num_results_size);
+
+GLICLASS_API void gliclass_get_error_message();
 
 #ifdef __cplusplus
 }

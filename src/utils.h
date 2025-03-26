@@ -13,8 +13,6 @@
  */
 int64_t* flatten_int_array(int64_t** data, size_t rows, size_t cols);
 
-GLiClassModelConfig* initialize_model_config(const char* model_config_path);
-
 /**
  * Sigmoid function to map logits to probabilities.
  * 

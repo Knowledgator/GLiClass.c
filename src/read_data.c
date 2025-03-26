@@ -6,34 +6,38 @@
 #include <stdbool.h>
 #include "cJSON.h"
 
-char* read_file(const char* filename) {
+#include "error.h"
+
+GLiClassStatus read_file(const char* filename, char** content) {
     FILE* file = fopen(filename, "rb");
     if (!file) {
-        fprintf(stderr, "Error: Faild to open file %s\n", filename);
-        return NULL;
+        set_error("Error: Failed to open file %s\n", filename);
+        return LOGICAL_ERROR;
     }
     fseek(file, 0, SEEK_END);
     long length = ftell(file);
     fseek(file, 0, SEEK_SET);
-    char* content = (char*)malloc(length + 1);
+    *content = (char*)calloc(length + 1, sizeof(char));
     fread(content, 1, length, file);
     content[length] = '\0';
     fclose(file);
-    return content;
+    return OK;
 }
 
 
-GLiClassModelConfig* parse_model_config_json(const char* json_string) {
+GLiClassStatus parse_model_config_json(const char* json_string, GLiClassModelConfig** config_out) {
     GLiClassModelConfig* config = (GLiClassModelConfig*)calloc(1, sizeof(GLiClassModelConfig));
     if (!config) {
-        return NULL;
+        fprintf(stderr, "Unable to allocate model config");
+        return MEMORY_ERROR;
     }
 
     // Parse json
     cJSON* json = cJSON_Parse(json_string);
     if (!json) {
-        fprintf(stderr, "Failed to parse JSON: %s\n", cJSON_GetErrorPtr());
-        return NULL;
+        free(config);
+        set_error("Failed to parse JSON: %s\n", cJSON_GetErrorPtr());
+        return FILE_ERROR;
     }
     
     // Get array texts
@@ -41,10 +45,13 @@ GLiClassModelConfig* parse_model_config_json(const char* json_string) {
     if (prompt_first_field && cJSON_IsBool(prompt_first_field)) {
         config->prompt_first = cJSON_IsTrue(prompt_first_field);
     } else {
-        fprintf(stderr, "Unexpected config format, expected 'prompt_first' field of bool type");
-        return NULL;
+        free(config);
+        cJSON_Delete(json);
+        set_error("Unexpected config format, expected 'prompt_first' field of bool type");
+        return FILE_ERROR;
     }
     
     cJSON_Delete(json);  // free memory
-    return config;
+    *config_out = config;
+    return OK;
 }

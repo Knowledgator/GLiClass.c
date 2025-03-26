@@ -3,14 +3,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include "read_data.h"
-
-GLiClassModelConfig* initialize_model_config(const char* model_config_path) {
-    const char* json_string = read_file(model_config_path);
-    GLiClassModelConfig* c = parse_model_config_json(json_string);
-    free((void*)json_string);
-    return c;
-}
 
 int64_t* flatten_int_array(int64_t** data, size_t rows, size_t cols) {
     int64_t* flat_data = (int64_t*)calloc(rows * cols, sizeof(int64_t));
