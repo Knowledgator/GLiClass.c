@@ -157,37 +157,41 @@ if(ONNX AND OPENVINO)
   add_library(GLiClass SHARED
                 src/gliclass_ort.c
                 src/onnx_runtime/model.c
-                src/onnx_runtime/parallel_processor.c
                 src/onnx_runtime/postprocessor.c
                 src/gliclass_ov.c
                 src/openvino_runtime/model.c
                 src/openvino_runtime/postprocessor.c
                 src/gliclass_common.c
+                src/gliclass_api.c
                 src/tokenizer.c
                 src/preprocessor.c
                 src/read_data.c
-                src/utils.c)
+                src/utils.c
+                src/error.c)
 elseif(ONNX)
   add_library(GLiClass SHARED
                 src/gliclass_ort.c
                 src/onnx_runtime/model.c
-                src/onnx_runtime/parallel_processor.c
                 src/onnx_runtime/postprocessor.c
                 src/gliclass_common.c
+                src/gliclass_api.c
                 src/tokenizer.c
                 src/preprocessor.c
                 src/read_data.c
-                src/utils.c)
+                src/utils.c
+                src/error.c)
 elseif(OPENVINO)
   add_library(GLiClass SHARED
                 src/gliclass_ov.c
                 src/openvino_runtime/model.c
                 src/openvino_runtime/postprocessor.c
                 src/gliclass_common.c
+                src/gliclass_api.c
                 src/tokenizer.c
                 src/preprocessor.c
                 src/read_data.c
-                src/utils.c)
+                src/utils.c
+                src/error.c)
 else()
   message(FATAL_ERROR "Non of provided runtimes was selected")
 endif()
@@ -206,7 +210,7 @@ endif()
 
 # Public headers (for installation)
 set_target_properties(GLiClass PROPERTIES
-  PUBLIC_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/include/GLiClass/gliclass_api.h")
+  PUBLIC_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/include/GLiClass/gliclass.h")
 
 # Include directories with tokenizers-cpp header files
 target_include_directories(GLiClass PUBLIC
