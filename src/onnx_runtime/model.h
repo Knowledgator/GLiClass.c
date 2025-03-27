@@ -13,7 +13,9 @@
  * @param attention_mask_tensor A pointer to the OrtValue that will store the attention mask tensor.
  * @return 0 if successful, -1 if an error occurs during tensor preparation.
  */
-int prepare_input_tensor(TokenizedInput* tokenized, OrtValue** input_ids_tensor, OrtValue** attention_mask_tensor);
+GLiClassStatus ort_prepare_input_tensors(
+    const TokenizedInput* tokenized, OrtValue** input_ids_tensor, OrtValue** attention_mask_tensor
+);
 
 /**
  * Prepares input tensors for the ONNX model using tokenized input data.
@@ -23,7 +25,9 @@ int prepare_input_tensor(TokenizedInput* tokenized, OrtValue** input_ids_tensor,
  * @param attention_mask_tensor A pointer to the OrtValue that will store the attention mask tensor.
  * @return 0 if successful, -1 if an error occurs during tensor preparation.
  */
-int prepare_input_tensors(TokenizedInputs* tokenized, OrtValue** input_ids_tensor, OrtValue** attention_mask_tensor);
+GLiClassStatus ort_prepare_input_tensors_batch(
+    const TokenizedInputs* tokenized, OrtValue** input_ids_tensor, OrtValue** attention_mask_tensor
+);
 
 /**
  * Runs inference using the ONNX model session and input tensors.
@@ -34,6 +38,8 @@ int prepare_input_tensors(TokenizedInputs* tokenized, OrtValue** input_ids_tenso
  * @return A pointer to an OrtValue containing the model's output, or NULL if inference fails.
  * IMPORTANT: The caller is responsible for releasing the output_tensor via g_ort->ReleaseValue(output_tensor)
  */
-OrtValue* run_inference(OrtSession* session, OrtValue* input_ids_tensor, OrtValue* attention_mask_tensor);
+GLiClassStatus ort_run_inference(
+    OrtSession* session, OrtValue* input_ids_tensor, OrtValue* attention_mask_tensor, OrtValue** output_tensor
+);
 
 #endif // ONNX_MODEL_H

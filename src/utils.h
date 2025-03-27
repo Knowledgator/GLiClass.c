@@ -2,6 +2,7 @@
 #define UTILS_H
 
 #include "GLiClass/gliclass_common.h"
+
 /**
  * Flattens a 2D array of integers into a 1D array of int64_t for use in tensor creation.
  * 
@@ -11,7 +12,9 @@
  * @return A pointer to a dynamically allocated 1D int64_t array.
  *         The caller is responsible for freeing the allocated memory.
  */
-int64_t* flatten_int_array(int64_t** data, size_t rows, size_t cols);
+GLiClassStatus flatten_int_array(
+    int64_t** data, size_t rows, size_t cols, int64_t** flast_data
+);
 
 /**
  * Sigmoid function to map logits to probabilities.
@@ -20,6 +23,14 @@ int64_t* flatten_int_array(int64_t** data, size_t rows, size_t cols);
  * @return The probability corresponding to the logit, calculated using the sigmoid function.
  */
 float sigmoid(float x);
+
+void init_mutex();
+
+void lock_mutex();
+
+void unlock_mutex();
+
+void free_mutex();
 
 void process_multi_label(
     const float* const output_data,

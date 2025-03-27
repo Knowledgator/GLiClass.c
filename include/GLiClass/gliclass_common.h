@@ -25,32 +25,72 @@ extern "C" {
 #include "tokenizers_c.h"
 
 typedef enum GLiClassStatus {
-    OK = 0,
-    MEMORY_ERROR,
-    LOGICAL_ERROR,
-    PROVIDER_ERROR,
-    FILE_ERROR
+    GC_OK,
+    GC_MEMORY_ERROR,
+    GC_LOGICAL_ERROR,
+    GC_INFERENCE_ERROR,
+    GC_PROVIDER_ERROR,
+    GC_FILE_ERROR
 } GLiClassStatus;
 
 typedef enum GLiClassProvider {
-    ONNX,
-    ONNX_OPENVINO,
-    OPENVINO
+    GC_ONNX,
+    GC_ONNX_OPENVINO,
+    GC_OPENVINO
 } GLiClassProvider;
 
 typedef enum GLiClassDevice {
-    GPU,
-    CPU
+    GC_NPU = -3,
+    GC_CPU = -2,
+    GC_GPU = -1,
+    GC_GPU_0 = 0,
+    GC_GPU_1,
+    GC_GPU_2,
+    GC_GPU_3,
+    GC_GPU_4,
+    GC_GPU_5,
+    GC_GPU_6,
+    GC_GPU_7,
+    GC_GPU_8
 } GLiClassDevice;
 
 typedef struct GLiClassModelConfig {
     bool prompt_first;
 } GLiClassModelConfig;
 
+/**
+ * Structure to store tokenized data for a batch of inputs.
+ * 
+ * Contains input IDs, token type IDs, and attention masks for each tokenized input.
+ * Also includes the batch size (number of texts) and the sequence length (max tokens per text).
+ */
+typedef struct TokenizedInputs {
+    int64_t** input_ids;        /**< Array of token IDs for each input text. */
+    int64_t** token_type_ids;   /**< Array of token type IDs for each input text. */
+    int64_t** attention_mask;   /**< Array indicating which tokens are actual tokens (1) and which are padding (0). */
+    size_t batch_size;      /**< Number of input texts in the batch. */
+    size_t seq_length;       /**< Maximum sequence length for the input texts. */
+} TokenizedInputs;
+
+/**
+ * Structure to store tokenized data for a single input.
+ * 
+ * Contains input IDs, token type IDs, and attention masks for the input.
+ * Also includes the sequence length (max tokens per text).
+ */
+typedef struct TokenizedInput {
+    int64_t* input_ids;        /**< Array of token IDs for each input text. */
+    int64_t* token_type_ids;   /**< Array of token type IDs for each input text. */
+    int64_t* attention_mask;   /**< Array indicating which tokens are actual tokens (1) and which are padding (0). */
+    size_t seq_length;       /**< Maximum sequence length for the input texts. */
+} TokenizedInput;
+
+typedef struct GLiClassProviderAPI GLiClassProviderAPI;
+
 typedef struct GLiClassSession {
     const GLiClassModelConfig* model_config;
     TokenizerHandle tokenizer;
-    void* provider_session;
+    GLiClassProviderAPI* provider;
     bool use_mutex;
 } GLiClassSession;
 
@@ -80,6 +120,31 @@ typedef struct GLiClassTokensInfo {
     bool truncated;   // Input was truncated
     size_t tokens_num;   // Number of processed tokens
 } GLiClassTokensInfo;
+
+typedef struct GLiClassProviderAPI {
+    void* session;
+    GLiClassStatus (*run_inference)(
+        GLiClassSession*, 
+        const GLiClassInferenceConfig*, 
+        const TokenizedInput*, 
+        const char**, 
+        const size_t,
+        GLiClassResult**, 
+        size_t*
+    );
+    GLiClassStatus (*run_inference_batch)(
+        GLiClassSession*,
+        const GLiClassInferenceConfig*,
+        const TokenizedInputs*,
+        const size_t,
+        const char***,
+        const size_t*,
+        const size_t,
+        GLiClassResult***,
+        size_t**
+    );
+    void (*cleanup)(void*);
+} GLiClassProviderAPI;
 
 /** 
  * @param batch_size Used in batch inference. Specifies max batch size
@@ -111,7 +176,9 @@ GLICLASS_API void gliclass_free_results(GLiClassResult* results, size_t num_resu
 
 GLICLASS_API void gliclass_free_results_batch(GLiClassResult** results, size_t* num_results, size_t num_results_size);
 
-GLICLASS_API void gliclass_get_error_message();
+GLICLASS_API char* gliclass_last_error_message();
+
+GLICLASS_API void gliclass_free_error();
 
 #ifdef __cplusplus
 }

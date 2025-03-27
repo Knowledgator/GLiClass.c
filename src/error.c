@@ -1,6 +1,10 @@
 #include "error.h"
 
+#include <stdlib.h>
 #include <stdarg.h>
+#include <stdio.h>
+
+GLiClassError* last_error = NULL;
 
 void set_error(const char* format, ...) {
     va_list args;

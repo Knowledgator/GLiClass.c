@@ -5,48 +5,55 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdbool.h>
+#include "error.h"
 
-const char** prepare_inputs(
+GLiClassStatus prepare_inputs(
     GLiClassModelConfig* model_config,
     const GLiClassInferenceConfig* config,
     const char* texts[], 
     const size_t num_texts,
     const char** labels[], 
     const size_t num_labels[],
-    const bool same_labels
-){
+    const bool same_labels,
+    char*** inputs
+) {
     // Array to store prepared data
-    char** inputs = (char**)calloc(num_texts, sizeof(char*));
-    if (!inputs) {
-        fprintf(stderr, "Error: cant allocate memory for array inputs\n");
-        return NULL;
+    *inputs = (char**)calloc(num_texts, sizeof(char*));
+    if (!(*inputs)) {
+        set_error("Cant allocate memory for array inputs");
+        return GC_MEMORY_ERROR;
     }
 
+    GLiClassStatus status;
     for (size_t i = 0; i < num_texts; ++i) {
         if (same_labels){
-            inputs[i] = prepare_input(texts[i], labels[0], num_labels[0], model_config->prompt_first, config->add_prefix_space);
+            status = prepare_input(
+                texts[i], labels[0], num_labels[0], model_config->prompt_first, config->add_prefix_space, &(*inputs)[i]
+            );
         } else {
-            inputs[i] = prepare_input(texts[i], labels[i], num_labels[i], model_config->prompt_first, config->add_prefix_space);
+            status = prepare_input(texts[i], labels[i], num_labels[i], model_config->prompt_first, config->add_prefix_space, &(*inputs)[i]);
         }
 
-        if (!inputs[i]) {
-            fprintf(stderr, "Error while preparing text for text: %zu\n", i);
+        if (status != GC_OK) {
+            set_error("Error while preparing text with id=%zu", i);
             for (size_t j = 0; j < i; ++j) {
                 free(inputs[j]);
             }
             free(inputs);
-            return NULL;
+            return status;
         }
     }
-    return (const char**)inputs;
+    return GC_OK;
 }
 
 
-void append_label(const char* label, char* result) {
+void append_label(
+    const char* label, const size_t result_size, char* result
+) {
     // add label in lower case
     for (const char* p = label; *p; ++p) {
-        char lower_char = tolower((unsigned char)*p);
-        strncat(result, &lower_char, 1);
+        char lower_char = (char)tolower((unsigned char)*p);
+        strncat_s(result, result_size, &lower_char, 1);
     }
 }
 
@@ -55,22 +62,24 @@ void append_labels(
     const char* label_prefix, 
     const char** labels, 
     const size_t num_labels, 
+    const size_t result_size,
     char* result
 ) {
     for (size_t i = 0; i < num_labels; ++i) {
-        strcat(result, label_prefix);
-        append_label(labels[i], result);
+        strcat_s(result, result_size, label_prefix);
+        append_label(labels[i], result_size, result);
     }
 }
 
 
-char* prepare_input(
+GLiClassStatus prepare_input(
     const char* text, 
     const char** labels,
     size_t num_labels,
     bool prompt_first,
-    bool add_prefix_space
-){
+    bool add_prefix_space,
+    char** input
+) {
     const char* label_prefix = add_prefix_space ? "<<LABEL>> " : "<<LABEL>>";
     const char* sep_tag = "<<SEP>>";
     size_t total_len = (
@@ -82,25 +91,29 @@ char* prepare_input(
         total_len += strlen(labels[i]);
     }    
 
-    char* result = (char*)calloc(total_len, sizeof(char));
-    if (!result) {
-        fprintf(stderr, "Cant allocate memmory for result prepared string\n");
-        return NULL;
+    *input = (char*)calloc(total_len, sizeof(char));
+    if (!(*input)) {
+        set_error("Unable allocate memmory for result prepared string");
+        return GC_MEMORY_ERROR;
     }
 
     if (prompt_first) {
-        append_labels(label_prefix, labels, num_labels, result);
-        strcat(result, sep_tag);
-        if (add_prefix_space) strcat(result, " ");
-        strcat(result, text);
+        append_labels(
+            label_prefix, labels, num_labels, total_len, *input
+        );
+        strcat_s(*input, total_len, sep_tag);
+        if (add_prefix_space) strcat_s(*input, total_len, " ");
+        strcat_s(*input, total_len, text);
     } else {
-        if (add_prefix_space) strcat(result, " ");
-        strcat(result, text);
-        append_labels(label_prefix, labels, num_labels, result);
-        strcat(result, sep_tag);
+        if (add_prefix_space) strcat_s(*input, total_len, " ");
+        strcat_s(*input, total_len, text);
+        append_labels(
+            label_prefix, labels, num_labels, total_len, *input
+        );
+        strcat_s(*input, total_len, sep_tag);
     }
 
-    return result;
+    return GC_OK;
 }
 
 /**

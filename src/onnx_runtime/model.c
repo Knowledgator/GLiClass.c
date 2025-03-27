@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "../utils.h"
+#include "../error.h"
 
 /**
  * Creates a tensor from flattened data.
@@ -12,18 +13,17 @@
  * @param cols The number of columns in the tensor.
  * @return A pointer to an OrtValue representing the tensor, or NULL if tensor creation fails.
  */
-OrtValue* create_tensor(int64_t* data, size_t rows, size_t cols) {
+GLiClassStatus ort_create_tensor(int64_t* data, size_t rows, size_t cols, OrtValue** tensor) {
     OrtMemoryInfo* memory_info = NULL;
     OrtStatus* status = g_ort->CreateCpuMemoryInfo(OrtArenaAllocator, OrtMemTypeDefault, &memory_info);
     if (status != NULL) {
         const char* msg = g_ort->GetErrorMessage(status);
-        fprintf(stderr, "Error: Failed to create MemoryInfo: %s\n", msg);
+        set_error("Error: Failed to create MemoryInfo: %s", msg);
         g_ort->ReleaseStatus(status);
-        return NULL;
+        return GC_INFERENCE_ERROR;
     }
 
     int64_t input_dims[2] = { (int64_t)rows, (int64_t)cols };
-    OrtValue* tensor = NULL;
 
     status = g_ort->CreateTensorWithDataAsOrtValue(
         memory_info,
@@ -32,71 +32,81 @@ OrtValue* create_tensor(int64_t* data, size_t rows, size_t cols) {
         input_dims,
         2,
         ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64,
-        &tensor
+        tensor
     );
     g_ort->ReleaseMemoryInfo(memory_info);
 
     if (status != NULL) {
         const char* msg = g_ort->GetErrorMessage(status);
-        fprintf(stderr, "Error: Failed to create tensor: %s\n", msg);
+        set_error("Error: Failed to create tensor: %s", msg);
         g_ort->ReleaseStatus(status);
-        return NULL;
+        return GC_INFERENCE_ERROR;
     }
 
-    return tensor;
+    return GC_OK;
 }
 
 
-int prepare_input_tensor(TokenizedInput* tokenized, OrtValue** input_ids_tensor, OrtValue** attention_mask_tensor) {
-    *input_ids_tensor = create_tensor(tokenized->input_ids, 1, tokenized->seq_length);
-    if (input_ids_tensor == NULL) {
-        fprintf(stderr, "Unable to allocate intput_ids_tensor");
-        return -1;
-    }
-    *attention_mask_tensor = create_tensor(tokenized->attention_mask, 1, tokenized->seq_length);
-    if (attention_mask_tensor == NULL) {
-        fprintf(stderr, "Unable to allocate attention_mask_tensor");
+GLiClassStatus ort_prepare_input_tensors(
+    const TokenizedInput* tokenized, OrtValue** input_ids_tensor, OrtValue** attention_mask_tensor
+) {
+    GLiClassStatus status = ort_create_tensor(
+        tokenized->input_ids, 1, tokenized->seq_length, input_ids_tensor
+    );
+    if (status != GC_OK) return status;
+
+    status = ort_create_tensor(tokenized->attention_mask, 1, tokenized->seq_length, attention_mask_tensor);
+    if (status != GC_OK) {
         g_ort->ReleaseValue(*input_ids_tensor);
-        return -1;
+        return status;
     }
-    return 0;
+    return GC_OK;
 }
 
 
-int prepare_input_tensors(TokenizedInputs* tokenized, OrtValue** input_ids_tensor, OrtValue** attention_mask_tensor) {
+GLiClassStatus ort_prepare_input_tensors_batch(
+    const TokenizedInputs* tokenized, OrtValue** input_ids_tensor, OrtValue** attention_mask_tensor
+) {
     // preparing input_ids
-    int64_t* input_ids_data = flatten_int_array(tokenized->input_ids, tokenized->batch_size, tokenized->seq_length);
-    if (input_ids_data == NULL) {
-        return -1;
-    }
-    *input_ids_tensor = create_tensor(input_ids_data, tokenized->batch_size, tokenized->seq_length);
-    if (*input_ids_tensor == NULL) {
+    int64_t* input_ids_data = NULL;
+    GLiClassStatus status = flatten_int_array(
+        tokenized->input_ids, tokenized->batch_size, tokenized->seq_length, &input_ids_data
+    );
+    if (status != GC_OK) return status;
+    
+    status = ort_create_tensor(input_ids_data, tokenized->batch_size, tokenized->seq_length, input_ids_tensor);
+    if (status != GC_OK) {
         free(input_ids_data);
-        return -1;
+        return status;
     }
 
     // preparing attention_mask
-    int64_t* attention_mask_data = flatten_int_array(tokenized->attention_mask, tokenized->batch_size, tokenized->seq_length);
-    if (attention_mask_data == NULL) {
+    int64_t* attention_mask_data = NULL;
+    status = flatten_int_array(
+        tokenized->attention_mask, tokenized->batch_size, tokenized->seq_length, &attention_mask_data
+    );
+    if (status != GC_OK) {
         free(input_ids_data);
         g_ort->ReleaseValue(*input_ids_tensor);
-        return -1;
+        return status;
     }
-    *attention_mask_tensor = create_tensor(attention_mask_data, tokenized->batch_size, tokenized->seq_length);
-    if (*attention_mask_tensor == NULL) {
+
+    status = ort_create_tensor(attention_mask_data, tokenized->batch_size, tokenized->seq_length, attention_mask_tensor);
+    if (status != GC_OK) {
         free(input_ids_data);
         free(attention_mask_data);
         g_ort->ReleaseValue(*input_ids_tensor);
-        return -1;
+        return status;
     }
-    return 0;
+    return status;
 }
 
 
-OrtValue* run_inference(OrtSession* session, OrtValue* input_ids_tensor, OrtValue* attention_mask_tensor) {
+GLiClassStatus ort_run_inference(
+    OrtSession* session, OrtValue* input_ids_tensor, OrtValue* attention_mask_tensor, OrtValue** output_tensor
+) {
     OrtStatus* status = NULL;
     OrtRunOptions* run_options = NULL;
-    OrtValue* output_tensor = NULL;
     OrtAllocator* allocator = NULL;
     char* output_name = NULL;
     
@@ -104,38 +114,38 @@ OrtValue* run_inference(OrtSession* session, OrtValue* input_ids_tensor, OrtValu
     status = g_ort->CreateRunOptions(&run_options);
     if (status != NULL) {
         const char* msg = g_ort->GetErrorMessage(status);
-        fprintf(stderr, "Error: Failed to create run options: %s\n", msg);
+        set_error("Failed to create run options: %s", msg);
         g_ort->ReleaseStatus(status);
-        return NULL;
+        return GC_INFERENCE_ERROR;
     }
 
     // Get the default allocator
     status = g_ort->GetAllocatorWithDefaultOptions(&allocator);
     if (status != NULL) {
         const char* msg = g_ort->GetErrorMessage(status);
-        fprintf(stderr, "Error: Failed to get allocator: %s\n", msg);
+        set_error("Failed to get allocator: %s", msg);
         g_ort->ReleaseStatus(status);
         g_ort->ReleaseRunOptions(run_options);
-        return NULL;
+        return GC_INFERENCE_ERROR;
     }
 
     // Get the number of output nodes
     size_t num_output_nodes = 0;
     status = g_ort->SessionGetOutputCount(session, &num_output_nodes);
     if (status != NULL || num_output_nodes == 0) {
-        fprintf(stderr, "Error: Failed to get output nodes count or no output nodes found\n");
+        set_error("Failed to get output nodes count or no output nodes found");
         if (status) g_ort->ReleaseStatus(status);
         g_ort->ReleaseRunOptions(run_options);
-        return NULL;
+        return GC_INFERENCE_ERROR;
     }
 
     // Get the name of the output node
     status = g_ort->SessionGetOutputName(session, 0, allocator, &output_name);
     if (status != NULL) {
-        fprintf(stderr, "Error: Failed to get output name\n");
+        set_error("Failed to get output name");
         g_ort->ReleaseStatus(status);
         g_ort->ReleaseRunOptions(run_options);
-        return NULL;
+        return GC_INFERENCE_ERROR;
     }
 
     // Set up input parameters
@@ -152,7 +162,7 @@ OrtValue* run_inference(OrtSession* session, OrtValue* input_ids_tensor, OrtValu
         2,  // number of input tensors
         (const char* const*)output_names,
         1,  // number of output tensors
-        &output_tensor
+        output_tensor
     );
 
     // Free the memory of the output name
@@ -166,12 +176,12 @@ OrtValue* run_inference(OrtSession* session, OrtValue* input_ids_tensor, OrtValu
     // Check the result of the inference
     if (status != NULL) {
         const char* msg = g_ort->GetErrorMessage(status);
-        fprintf(stderr, "Error during inference: %s\n", msg);
+        set_error("Error during inference: %s\n", msg);
         g_ort->ReleaseStatus(status);
-        if (output_tensor) {
-            g_ort->ReleaseValue(output_tensor);
+        if (*output_tensor) {
+            g_ort->ReleaseValue(*output_tensor);
         }
-        return NULL;
+        return GC_INFERENCE_ERROR;
     }
-    return output_tensor;
+    return GC_OK;
 }

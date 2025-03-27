@@ -1,5 +1,5 @@
-#ifndef GLICLASS_API_H_
-#define GLICLASS_API_H_
+#ifndef GLICLASS_H_
+#define GLICLASS_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -7,11 +7,11 @@ extern "C" {
 
 #include "GLiClass/gliclass_common.h"
 
-#ifndef USE_ONNX
+#ifdef USE_ONNX
 #include "GLiClass/gliclass_ort.h"
 #endif
 
-#ifndef USE_OPENVINO
+#ifdef USE_OPENVINO
 #include "GLiClass/gliclass_ov.h"
 #endif
 

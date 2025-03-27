@@ -9,7 +9,6 @@
 #include "utils.h"
 #include "onnx_runtime/model.h"
 #include "onnx_runtime/postprocessor.h"
-#include "onnx_runtime/parallel_processor.h"
 
 #ifndef _WIN32
     #include <unistd.h>
@@ -24,39 +23,71 @@
 
 const OrtApi* g_ort = NULL;
 
-const OrtApi* gliclass_initialize_ort_api() {
+const OrtApi* gliclass_ort_initialize_api() {
     g_ort = OrtGetApiBase()->GetApi(ORT_API_VERSION);
     return g_ort;
 }
 
 
-GLiClassStatus gliclass_create_ort_env(const char* env_name, OrtEnv** env) {
+GLiClassStatus gliclass_ort_create_env(const char* env_name, OrtEnv** env) {
     OrtStatus* status = g_ort->CreateEnv(ORT_LOGGING_LEVEL_WARNING, env_name, env);
     if (status != NULL) {
         const char* msg = g_ort->GetErrorMessage(status);
         set_error("Failed to create ORT Env: %s", msg);
         g_ort->ReleaseStatus(status);
-        return PROVIDER_ERROR;
+        return GC_PROVIDER_ERROR;
     }
-    return OK;
+    return GC_OK;
 }
+
+
+GLiClassStatus gliclass_ort_infer(
+    GLiClassSession* session,
+    const GLiClassInferenceConfig* config,
+    const TokenizedInput* input,
+    const char* labels[],
+    const size_t num_labels,
+    GLiClassResult* out_results[],
+    size_t* out_num_results
+);
+
+
+GLiClassStatus gliclass_ort_infer_batch(
+    GLiClassSession* session,
+    const GLiClassInferenceConfig* config,
+    const TokenizedInputs* input,
+    const size_t batch_id,
+    const char** labels[],
+    const size_t* num_labels,
+    const size_t num_labels_size, // TODO: rename
+    GLiClassResult** out_results[],
+    size_t* out_num_results[]
+);
+
+
+void gliclass_ort_cleanup(GLiClassORTSession* session);
+
+
+void gliclass_ort_cleanup_custom(GLiClassORTSession* session);
+
 
 #ifdef _WIN32
 static GLiClassStatus convert_path(const char* path, wchar_t** output) {
-    size_t len = mbstowcs(NULL, path, 0);
+    size_t len = strlen(path);
     if(len == (size_t)-1) {
         set_error("Error: Unable to convert path to wchar_t*: %s", path);
-        return LOGICAL_ERROR;
+        return GC_LOGICAL_ERROR;
     }
 
     *output = (wchar_t*)calloc((len + 1), sizeof(wchar_t));
     if(!output) {
         set_error("Unable to allocate wchar path");
-        return MEMORY_ERROR;
+        return GC_MEMORY_ERROR;
     }
 
-    mbstowcs(*output, path, len + 1);
-    return OK;
+    size_t converted;
+    mbstowcs_s(&converted, *output, len + 1, path, len + 1);
+    return GC_OK;
 }
 #endif
 
@@ -70,7 +101,7 @@ GLiClassStatus initialize_ort_session(
     #ifdef _WIN32
     wchar_t* path = NULL;
     GLiClassStatus gc_status = convert_path(model_path, &path);
-    if (gc_status != OK) {
+    if (gc_status != GC_OK) {
         g_ort->ReleaseSessionOptions(options);
         return gc_status;
     }
@@ -85,10 +116,11 @@ GLiClassStatus initialize_ort_session(
         set_error("Error: Failed to create session: %s", msg);
         g_ort->ReleaseStatus(status);
         g_ort->ReleaseSessionOptions(options);
-        return PROVIDER_ERROR;
+        return GC_PROVIDER_ERROR;
     }
-    return OK;
+    return GC_OK;
 }
+
 
 GLiClassStatus initialize_base_options(
     const int num_threads, OrtSessionOptions** session_options
@@ -98,7 +130,7 @@ GLiClassStatus initialize_base_options(
         const char* msg = g_ort->GetErrorMessage(status);
         set_error("Error: Failed to create session options: %s", msg);
         g_ort->ReleaseStatus(status);
-        return PROVIDER_ERROR;
+        return GC_PROVIDER_ERROR;
     }
 
     // Set the number of threads for intra-op operations
@@ -108,7 +140,7 @@ GLiClassStatus initialize_base_options(
         set_error("Error: Failed to set intra-op threads: %s", msg);
         g_ort->ReleaseStatus(status);
         g_ort->ReleaseSessionOptions(*session_options);
-        return PROVIDER_ERROR;
+        return GC_PROVIDER_ERROR;
     }
 
     // Set the number of threads for inter-op operations
@@ -118,105 +150,181 @@ GLiClassStatus initialize_base_options(
         set_error("Error: Failed to set inter-op threads: %s", msg);
         g_ort->ReleaseStatus(status);
         g_ort->ReleaseSessionOptions(*session_options);
-        return PROVIDER_ERROR;
+        return GC_PROVIDER_ERROR;
     }
-    return OK;
+    return GC_OK;
 }
 
 
-GLiClassStatus gliclass_create_ort_session_cpu_default(
-    const char* model_path, int num_threads, GLiClassSessionORT** provider_session_out
+GLiClassStatus gliclass_ort_cpu_init(
+    const char* model_path, int num_threads, GLiClassProviderAPI** provider
 ) {    
     // Check existence
     if (access(model_path, F_OK) != 0) {
         set_error("Error: Model file not found at path: %s", model_path);
-        return FILE_ERROR;
+        return GC_FILE_ERROR;
     }
     
     // Create env
-    OrtEnv* env = NULL;
-    GLiClassStatus status = gliclass_create_ort_env("GLiClass", &env);
-    if (status != OK) {
+    OrtEnv* ort_env = NULL;
+    GLiClassStatus status = gliclass_ort_create_env("GLiClass", &ort_env);
+    if (status != GC_OK) {
         return status;
     }
 
     // Create session options
     OrtSessionOptions* options = NULL;
     status = initialize_base_options(num_threads, &options);
-    if (status != OK) {
-        g_ort->ReleaseEnv(env);
+    if (status != GC_OK) {
+        g_ort->ReleaseEnv(ort_env);
         return status;
     } 
 
     // Create session
-    OrtSession* session = NULL;
-    status = initialize_ort_session(env, options, model_path, &session);
-    if (status != OK) {
-        g_ort->ReleaseEnv(env);
-        g_ort->ReleaseSessionOptions(options);
+    OrtSession* ort_session = NULL;
+    status = initialize_ort_session(ort_env, options, model_path, &ort_session);
+    g_ort->ReleaseSessionOptions(options);
+    if (status != GC_OK) {
+        g_ort->ReleaseEnv(ort_env);
         return status;
     }
 
     // Create provider session
-    GLiClassSessionORT* provider_session = (GLiClassSessionORT*)calloc(1, sizeof(GLiClassSessionORT*));
-    if (!provider_session) {
-        set_error("Unable to allocate provider session");
-        g_ort->ReleaseEnv(env);
-        g_ort->ReleaseSessionOptions(options);
-        return MEMORY_ERROR;
+    *provider = (GLiClassProviderAPI*)calloc(1, sizeof(GLiClassProviderAPI*));
+    if (!(*provider)) {
+        set_error("Unable to allocate provider");
+        g_ort->ReleaseEnv(ort_env);
+        g_ort->ReleaseSession(ort_session);
+        return GC_MEMORY_ERROR;
     }
-    provider_session->env = env;
-    provider_session->session = session;
-    provider_session_out = provider_session;
-    return OK;
+
+    GLiClassORTSession* session = (GLiClassORTSession*)calloc(1, sizeof(GLiClassORTSession));
+    if (!session) {
+        set_error("Unable to allocate provider session");
+        g_ort->ReleaseEnv(ort_env);
+        g_ort->ReleaseSession(ort_session);
+        free(*provider);
+        return GC_MEMORY_ERROR;
+    }
+    session->session = ort_session;
+    session->env = ort_env;
+    
+    (*provider)->session = (void*)session;
+    (*provider)->run_inference = gliclass_ort_infer;
+    (*provider)->run_inference_batch = gliclass_ort_infer_batch;
+    (*provider)->cleanup = gliclass_ort_cleanup;
+    return GC_OK;
 }
 
+
 #ifndef USE_CUDA
-OrtSession* gliclass_create_ort_session_cuda(const char* model_path, int num_threads, int device_id) {
+GLiClassStatus gliclass_ort_cuda_init(
+    const char* model_path, int num_threads, int device_id, GLiClassProviderAPI** provider
+) {
     // Check existence
     if (access(model_path, F_OK) != 0) {
-        fprintf(stderr, "Error: Model file not found at path: %s", model_path);
-        return NULL;
+        set_error("Error: Model file not found at path: %s", model_path);
+        return GC_FILE_ERROR;
+    }
+
+    // Create env
+    OrtEnv* ort_env = NULL;
+    GLiClassStatus gc_status = gliclass_ort_create_env("GLiClass", &ort_env);
+    if (gc_status != GC_OK) {
+        return gc_status;
     }
 
     // Create session options
-    OrtSessionOptions* options = initialize_base_options(num_threads);
-    if (!options) return NULL;
+    OrtSessionOptions* options = NULL;
+    gc_status = initialize_base_options(num_threads, &options);
+    if (gc_status != GC_OK) {
+        g_ort->ReleaseEnv(ort_env);
+        return gc_status;
+    }
 
     // Append CUDA session options
     OrtStatus* status = OrtSessionOptionsAppendExecutionProvider_CUDA(options, device_id);
     if (status != NULL) {
         const char* msg = g_ort->GetErrorMessage(status);
-        fprintf(stderr, "Error: Failed to add CUDA Execution Provider: %s", msg);
+        set_error("Error: Failed to add CUDA Execution Provider: %s", msg);
+        g_ort->ReleaseEnv(ort_env);
         g_ort->ReleaseStatus(status);
         g_ort->ReleaseSessionOptions(options);
-        return NULL;
+        return GC_PROVIDER_ERROR;
     }
     status = g_ort->SetSessionGraphOptimizationLevel(options, ORT_ENABLE_ALL);
     if (status != NULL) {
         const char* msg = g_ort->GetErrorMessage(status);
-        fprintf(stderr, "Error: Failed to enable graph optimization: %s", msg);
+        set_error("Error: Failed to enable graph optimization: %s", msg);
+        g_ort->ReleaseEnv(ort_env);
         g_ort->ReleaseStatus(status);
         g_ort->ReleaseSessionOptions(options);
-        return NULL;
+        return GC_PROVIDER_ERROR;
     }
-    OrtSession* session = initialize_ort_session(env, options, model_path);
+
+    // Create session
+    OrtSession* ort_session = NULL;
+    gc_status = initialize_ort_session(ort_env, options, model_path, &ort_session);
     g_ort->ReleaseSessionOptions(options);
-    return session;
+    if (gc_status != GC_OK) {
+        g_ort->ReleaseEnv(ort_env);
+        g_ort->ReleaseSession(ort_session);
+        return gc_status;
+    }
+
+    // Create provider session
+    *provider = (GLiClassProviderAPI*)calloc(1, sizeof(GLiClassProviderAPI*));
+    if (!(*provider)) {
+        set_error("Unable to allocate provider");
+        g_ort->ReleaseEnv(ort_env);
+        g_ort->ReleaseSession(ort_session);
+        return GC_MEMORY_ERROR;
+    }
+
+    GLiClassORTSession* session = (GLiClassORTSession*)calloc(1, sizeof(GLiClassORTSession));
+    if (!session) {
+        set_error("Unable to allocate provider session");
+        g_ort->ReleaseEnv(ort_env);
+        g_ort->ReleaseSession(ort_session);
+        free(*provider);
+        return GC_MEMORY_ERROR;
+    }
+    session->session = ort_session;
+    session->env = ort_env;
+    
+    (*provider)->session = (void*)session;
+    (*provider)->run_inference = gliclass_ort_infer;
+    (*provider)->run_inference_batch = gliclass_ort_infer_batch;
+    (*provider)->cleanup = gliclass_ort_cleanup;
+    return GC_OK;
 }
 #endif
 
 
-OrtSession* gliclass_create_ort_session_openvino(OrtEnv* env, const char* model_path, const int num_threads, const char* device_type) {
+GLiClassStatus gliclass_ort_openvino_init(
+    const char* model_path, const int num_threads, const char* device_type, 
+    GLiClassProviderAPI** provider
+) {
     // Check existence
     if (access(model_path, F_OK) != 0) {
-        fprintf(stderr, "Error: Model file not found at path: %s", model_path);
-        return NULL;
+        set_error("Error: Model file not found at path: %s", model_path);
+        return GC_FILE_ERROR;
+    }
+
+    // Create env
+    OrtEnv* ort_env = NULL;
+    GLiClassStatus gc_status = gliclass_ort_create_env("GLiClass", &ort_env);
+    if (gc_status != GC_OK) {
+        return gc_status;
     }
 
     // Create session options
-    OrtSessionOptions* options = initialize_base_options(num_threads);
-    if (!options) return NULL;
+    OrtSessionOptions* options = NULL;
+    gc_status = initialize_base_options(num_threads, &options);
+    if (gc_status != GC_OK) {
+        g_ort->ReleaseEnv(ort_env);
+        return gc_status;
+    }
 
     // Append OpenVINO EP
     const char* keys[] = {"device_type"};
@@ -229,139 +337,120 @@ OrtSession* gliclass_create_ort_session_openvino(OrtEnv* env, const char* model_
     );
     if (status != NULL) {
         const char* msg = g_ort->GetErrorMessage(status);
-        fprintf(stderr, "Failed to append OpenVINO EP: %s", msg);
+        set_error("Failed to append OpenVINO EP: %s", msg);
+        g_ort->ReleaseEnv(ort_env);
         g_ort->ReleaseStatus(status);
         g_ort->ReleaseSessionOptions(options);
-        g_ort->ReleaseEnv(env);
-        return NULL;
+        return GC_PROVIDER_ERROR;
     }
 
-    OrtSession* session = initialize_ort_session(env, options, model_path);
-    g_ort->ReleaseSessionOptions(options); // Free session options after creating session
-    return session;
+    // Create session
+    OrtSession* ort_session = NULL;
+    gc_status = initialize_ort_session(ort_env, options, model_path, &ort_session);
+    g_ort->ReleaseSessionOptions(options);
+    if (gc_status != GC_OK) {
+        g_ort->ReleaseEnv(ort_env);
+        return gc_status;
+    }
+
+    // Create provider session
+    *provider = (GLiClassProviderAPI*)calloc(1, sizeof(GLiClassProviderAPI*));
+    if (!(*provider)) {
+        set_error("Unable to allocate provider");
+        g_ort->ReleaseEnv(ort_env);
+        g_ort->ReleaseSession(ort_session);
+        return GC_MEMORY_ERROR;
+    }
+
+    GLiClassORTSession* session = (GLiClassORTSession*)calloc(1, sizeof(GLiClassORTSession));
+    if (!session) {
+        set_error("Unable to allocate provider session");
+        g_ort->ReleaseEnv(ort_env);
+        g_ort->ReleaseSession(ort_session);
+        free(*provider);
+        return GC_MEMORY_ERROR;
+    }
+    session->session = ort_session;
+    session->env = ort_env;
+    
+    (*provider)->session = (void*)session;
+    (*provider)->run_inference = gliclass_ort_infer;
+    (*provider)->run_inference_batch = gliclass_ort_infer_batch;
+    (*provider)->cleanup = gliclass_ort_cleanup;
+    return GC_OK;
 }
 
 
-GLiClassSession* gliclass_init_custom_ort(
-    const char* model_config_path,
-    const char* tokenizer_path, 
-    const bool use_mutex,
-    OrtSession* ort_session
+GLiClassStatus gliclass_ort_init_custom(
+    OrtSession* ort_session, GLiClassProviderAPI** provider
 ) {
     if (!g_ort || !ort_session) {
-        fprintf(stderr, "ORT API and ORT session should be initialized!");
-        return NULL;
+        set_error("ORT API and ORT session should be initialized!");
+        return GC_LOGICAL_ERROR;
     }
 
-    GLiClassSession* session = calloc(1, sizeof(GLiClassSession));
-    if (!session) return NULL;
-
-    // Initialize ONNX session (model loading)
-    session->session = ort_session;
-
-    session->use_mutex = use_mutex;
-    if (session->use_mutex) {
-        // Initialize queue mutex
-        #ifndef _WIN32
-        pthread_mutex_init(&queue_mutex, NULL);
-        #else
-        queue_mutex = CreateMutex(NULL, FALSE, NULL);
-        #endif
+    *provider = (GLiClassProviderAPI*)calloc(1, sizeof(GLiClassProviderAPI));
+    if (!(*provider)) {
+        set_error("Unable to allocate provider");
+        return GC_MEMORY_ERROR;
     }
 
-    // Initialize the model config
-    session->model_config = initialize_model_config(model_config_path);
-    if (!session->model_config) {
-        gliclass_cleanup(session);
-        return NULL;
+    GLiClassORTSession* session = (GLiClassORTSession*)calloc(1, sizeof(GLiClassORTSession));
+    if (!session) {
+        set_error("Unable to allocate provider session");
+        free(*provider);
+        return GC_MEMORY_ERROR;
     }
+    session->session = (void*)ort_session;
+    session->env = NULL;
 
-    // Initialize tokenizer
-    session->tokenizer = create_tokenizer(tokenizer_path);
-    if (!session->tokenizer) {
-        gliclass_cleanup(session);
-        return NULL;
-    }
-    return session;
+    (*provider)->session = (void*)session;
+    (*provider)->run_inference = gliclass_ort_infer;
+    (*provider)->run_inference_batch = gliclass_ort_infer_batch;
+    (*provider)->cleanup = gliclass_ort_cleanup_custom;
+    return GC_OK;
 }
 
 
-bool gliclass_infer(
+GLiClassStatus gliclass_ort_infer(
     GLiClassSession* session,
     const GLiClassInferenceConfig* config,
-    const char* input_text,
+    const TokenizedInput* input,
     const char* labels[],
     const size_t num_labels,
     GLiClassResult* out_results[],
-    size_t* out_num_results,
-    GLiClassTokensInfo* info
+    size_t* out_num_results
 ) {
-    if (!session || !input_text || !labels || num_labels == 0) {
-        fprintf(stderr, "Inputs have invalid value!");
-        return false;
-    }
-
-    // Allocate output array for results
-    *out_num_results = 0;
-    *out_results = (GLiClassResult*)calloc(num_labels, sizeof(GLiClassResult));
-    if (!*out_results) {
-        fprintf(stderr, "Unable to allocate results");
-        return false;
-    }
-
-    char* input = prepare_input(input_text, labels, num_labels, session->model_config->prompt_first, config->add_prefix_space);
-    if (!input) {
-        fprintf(stderr, "Error while preparing text");
-        return false;
-    }
-
-    TokenizedInput tokenized = tokenize_input(
-        session->tokenizer, 
-        (const char*)input,
-        config->min_length,
-        config->max_length
-    );
-    
-    if (info) {
-        info->truncated = tokenized.truncated;
-        info->tokens_num = tokenized.seq_length;
-    }
-
-    if (tokenized.seq_length == 0) {
-        return true;
-    }
-
     OrtValue* input_ids_tensor = NULL;
     OrtValue* attention_mask_tensor = NULL;
-    prepare_input_tensor(
-        &tokenized,
+
+    GLiClassStatus status = ort_prepare_input_tensors(
+        input,
         &input_ids_tensor, 
         &attention_mask_tensor
     );
+    if (status != GC_OK) return status;
 
-    OrtValue* output_tensor;
+    OrtValue* output_tensor = NULL;
     if (session->use_mutex) {
-        #ifndef _WIN32
-        pthread_mutex_lock(&queue_mutex);
-        #else
-        WaitForSingleObject(queue_mutex, INFINITE); 
-        #endif
-        output_tensor = run_inference(session->session, input_ids_tensor, attention_mask_tensor);
-        #ifndef _WIN32
-        pthread_mutex_unlock(&queue_mutex);
-        #else
-        ReleaseMutex(queue_mutex);
-        #endif
+        lock_mutex();
+        status = ort_run_inference(
+            session->provider->session, input_ids_tensor, attention_mask_tensor, &output_tensor
+        );
+        unlock_mutex();
     } else {
-        output_tensor = run_inference(session->session, input_ids_tensor, attention_mask_tensor);
+        status = ort_run_inference(
+            session->provider->session, input_ids_tensor, attention_mask_tensor, &output_tensor
+        );
     }
     g_ort->ReleaseValue(input_ids_tensor);
     g_ort->ReleaseValue(attention_mask_tensor);
-    free_tokenized_input(&tokenized);
-    free(input);
 
-    process_output_tensor(
-        session,
+    if (status != GC_OK) {
+        return status;
+    }
+
+    return ort_process_output_tensor(
         config,
         output_tensor, 
         labels, 
@@ -369,132 +458,69 @@ bool gliclass_infer(
         *out_results,
         out_num_results
     );
-    return true;
 }
 
 
-bool gliclass_infer_batch( // TODO: add quick exit on empty batches
+GLiClassStatus gliclass_ort_infer_batch(
     GLiClassSession* session,
     const GLiClassInferenceConfig* config,
-    const char* input_texts[],
-    const size_t num_texts,
+    const TokenizedInputs* input,
+    const size_t batch_id,
     const char** labels[],
     const size_t* num_labels,
     const size_t num_labels_size, // TODO: rename
     GLiClassResult** out_results[],
-    size_t* out_num_results[],
-    size_t* out_num_results_size,
-    bool** truncated
+    size_t* out_num_results[]
 ) {
-    if (
-        !session || !input_texts || !labels || !num_labels || num_labels_size == 0 
-        || (num_labels_size != 1 && num_labels_size != num_texts)
-    ) {
-        fprintf(stderr, "Inputs have invalid value!");
-        return false;
+    OrtValue* input_ids_tensor = NULL;
+    OrtValue* attention_mask_tensor = NULL;
+    GLiClassStatus status = ort_prepare_input_tensors_batch(
+        input,
+        &input_ids_tensor, 
+        &attention_mask_tensor
+    );
+    if (status != GC_OK) return status;
+
+    OrtValue* output_tensor = NULL;
+    if (session->use_mutex) {
+        lock_mutex();
+        status = ort_run_inference(
+            session->provider->session, input_ids_tensor, attention_mask_tensor, &output_tensor
+        );
+        unlock_mutex();
+    } else {
+        status = ort_run_inference(
+            session->provider->session, input_ids_tensor, attention_mask_tensor, &output_tensor
+        );
     }
+    g_ort->ReleaseValue(input_ids_tensor);
+    g_ort->ReleaseValue(attention_mask_tensor);
+    if (status != GC_OK) return status;
 
-    *out_num_results_size = num_texts;
-    *out_results = (GLiClassResult**)calloc(*out_num_results_size, sizeof(GLiClassResult*));
-    *out_num_results = (size_t*)calloc(num_texts, sizeof(size_t));
-    if (!out_num_results || !out_results) {
-        fprintf(stderr, "Unable to allocate results");
-        return false;
-    }
-
-    // Allocate memory for tensors
-    size_t num_batches = (
-        num_texts + config->batch_size - 1
-    ) / config->batch_size;
-    OrtValue** input_ids_tensors = (OrtValue**)calloc(num_batches, sizeof(OrtValue*));
-    OrtValue** attention_mask_tensors = (OrtValue**)calloc(num_batches, sizeof(OrtValue*));
-    OrtValue** output_tensors = (OrtValue**)calloc(num_batches, sizeof(OrtValue*));
-
-    // Preprocessing stage
-    parallel_preprocess(
-        session,
+    status = ort_process_output_tensor_batch(
         config,
-        num_batches,
-        input_texts, 
-        num_texts,
+        output_tensor, 
         labels, 
         num_labels, 
         num_labels_size, 
-        input_ids_tensors,
-        attention_mask_tensors,
-        truncated
-    );
-
-    // Inference stage
-    #pragma omp parallel for schedule(dynamic)
-    for (size_t i = 0; i < num_batches; i++) {
-        if (session->use_mutex) {
-            #ifndef _WIN32
-            pthread_mutex_lock(&queue_mutex);
-            #else
-            WaitForSingleObject(queue_mutex, INFINITE); 
-            #endif
-            output_tensors[i] = run_inference(session->session, input_ids_tensors[i], attention_mask_tensors[i]);
-            #ifndef _WIN32
-            pthread_mutex_unlock(&queue_mutex);
-            #else
-            ReleaseMutex(queue_mutex);
-            #endif
-        } else {
-            output_tensors[i] = run_inference(session->session, input_ids_tensors[i], attention_mask_tensors[i]);
-        }
-        g_ort->ReleaseValue(input_ids_tensors[i]);
-        g_ort->ReleaseValue(attention_mask_tensors[i]);
-    }
-    free(input_ids_tensors);
-    free(attention_mask_tensors);
-
-    // Postprocess stage - processing batches
-    parallel_postprocess(
-        session,
-        config,
-        output_tensors, 
-        num_batches,
-        num_texts,
-        labels, 
-        num_labels,
-        num_labels_size, 
-        config->classification_type,
+        batch_id, 
         *out_results,
         *out_num_results
     );
-
-    return true;
+    // Free output tensor after processing
+    g_ort->ReleaseValue(output_tensor);
+    return status;
 }
 
 
-void gliclass_cleanup(GLiClassSession* session) {
+void gliclass_ort_cleanup(GLiClassORTSession* session) {
     if (!session) return;
-    if (session->use_mutex) {
-        #ifndef _WIN32
-        pthread_mutex_destroy(&queue_mutex);
-        #else
-        CloseHandle(queue_mutex);
-        #endif
-    }
-    if (session->model_config) free((void*)session->model_config);
-    if (session->tokenizer) tokenizers_free(session->tokenizer);
     if (session->env) g_ort->ReleaseEnv(session->env);
     if (session->session) g_ort->ReleaseSession(session->session);
     free(session);
 }
 
 
-void gliclass_cleanup_custom_ort(GLiClassSession* session) {
-    if (!session) return;
-    if (session->use_mutex) {
-        #ifndef _WIN32
-        pthread_mutex_destroy(&queue_mutex);
-        #else
-        CloseHandle(queue_mutex);
-        #endif
-    }
-    if (session->model_config) free((void*)session->model_config);
-    if (session->tokenizer) tokenizers_free(session->tokenizer);
+void gliclass_ort_cleanup_custom(GLiClassORTSession* session) {
     free(session);
 }

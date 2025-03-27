@@ -4,18 +4,62 @@
 #include <stdlib.h>
 #include <math.h>
 
-int64_t* flatten_int_array(int64_t** data, size_t rows, size_t cols) {
-    int64_t* flat_data = (int64_t*)calloc(rows * cols, sizeof(int64_t));
-    if (!flat_data) {
-        fprintf(stderr, "Error: Memory allocation for flat_data failed\n");
-        return NULL;
+#include "error.h"
+
+// Mutex declarations
+#ifndef _WIN32
+static pthread_mutex_t queue_mutex;
+#else
+static HANDLE queue_mutex;
+#endif
+
+void init_mutex() {
+    // Initialize queue mutex
+    #ifndef _WIN32
+    pthread_mutex_init(&queue_mutex, NULL);
+    #else
+    queue_mutex = CreateMutex(NULL, FALSE, NULL);
+    #endif
+}
+
+void lock_mutex() {
+    #ifndef _WIN32
+    pthread_mutex_lock(&queue_mutex);
+    #else
+    WaitForSingleObject(queue_mutex, INFINITE); 
+    #endif
+}
+
+void unlock_mutex() {
+    #ifndef _WIN32
+    pthread_mutex_unlock(&queue_mutex);
+    #else
+    ReleaseMutex(queue_mutex);
+    #endif
+}
+
+void free_mutex() {
+    #ifndef _WIN32
+    pthread_mutex_destroy(&queue_mutex);
+    #else
+    CloseHandle(queue_mutex);
+    #endif
+}
+
+GLiClassStatus flatten_int_array(
+    int64_t** data, size_t rows, size_t cols, int64_t** flat_data
+) {
+    *flat_data = (int64_t*)calloc(rows * cols, sizeof(int64_t));
+    if (!(*flat_data)) {
+        set_error("Error: Memory allocation for flat_data failed");
+        return GC_MEMORY_ERROR;
     }
     for (size_t i = 0; i < rows; ++i) {
         for (size_t j = 0; j < cols; ++j) {
-            flat_data[i * cols + j] = data[i][j];
+            (*flat_data)[i * cols + j] = data[i][j];
         }
     }
-    return flat_data;
+    return GC_OK;
 }
 
 

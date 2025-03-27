@@ -8,33 +8,17 @@ extern "C" {
 #include "GLiClass/gliclass_common.h"
 #include <openvino/c/openvino.h>
 
-typedef struct GLiClassSessionOpenVino {
+typedef struct GLiClassOpenVinoSession {
     ov_core_t* core;
     ov_compiled_model_t* model;
-} GLiClassSessionOpenVino;
+} GLiClassOpenVinoSession;
 
-GLICLASS_API GLiClassSessionOpenVino* gliclass_init_openvino_runtime(
+GLICLASS_API GLiClassStatus gliclass_openvino_init(
     const char* model_path,
-    // const char* bin_path,
-    const char* model_config_path,
-    const char* tokenizer_path,
     const int num_threads,
     const char* device_type,
-    const bool use_mutex
+    GLiClassProviderAPI** provider
 );
-
-GLICLASS_API bool gliclass_infer_openvino(
-    GLiClassSessionOpenVino* session,
-    const GLiClassInferenceConfig* config,
-    const char* input_text,
-    const char* labels[],
-    const size_t num_labels,
-    GLiClassResult* out_results[],
-    size_t* out_num_results,
-    GLiClassTokensInfo* info
-);
-
-GLICLASS_API void gliclass_cleanup_openvino(GLiClassSessionOpenVino* session);
 
 #ifdef __cplusplus
 }

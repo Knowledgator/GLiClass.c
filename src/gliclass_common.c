@@ -4,6 +4,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "error.h"
+
 bool gliclass_create_inference_config(
     size_t batch_size,
     size_t min_length,
@@ -59,4 +61,12 @@ void gliclass_free_results_batch(GLiClassResult** results, size_t* num_results, 
     }
     free(results);
     free(num_results);
+}
+
+char* gliclass_last_error_message() {
+    return last_error->message;
+}
+
+void gliclass_free_error() {
+    free(last_error);
 }

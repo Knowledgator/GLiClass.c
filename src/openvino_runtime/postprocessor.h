@@ -3,8 +3,8 @@
 
 #include "GLiClass/gliclass_ov.h"
 
-void process_output_tensor_openvino(
-    GLiClassSessionOpenVino* session,
+GLiClassStatus openvino_process_output_tensor(
+    GLiClassSession* session,
     const GLiClassInferenceConfig* config,
     ov_tensor_t* output_tensor,
     const char* labels[],

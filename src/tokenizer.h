@@ -3,35 +3,7 @@
 
 #include "tokenizers_c.h"
 #include <stdbool.h>
-
-/**
- * Structure to store tokenized data for a batch of inputs.
- * 
- * Contains input IDs, token type IDs, and attention masks for each tokenized input.
- * Also includes the batch size (number of texts) and the sequence length (max tokens per text).
- */
-typedef struct {
-    int64_t** input_ids;        /**< Array of token IDs for each input text. */
-    int64_t** token_type_ids;   /**< Array of token type IDs for each input text. */
-    int64_t** attention_mask;   /**< Array indicating which tokens are actual tokens (1) and which are padding (0). */
-    size_t batch_size;      /**< Number of input texts in the batch. */
-    size_t seq_length;       /**< Maximum sequence length for the input texts. */
-    bool* truncated;
-} TokenizedInputs;
-
-/**
- * Structure to store tokenized data for a single input.
- * 
- * Contains input IDs, token type IDs, and attention masks for the input.
- * Also includes the sequence length (max tokens per text).
- */
-typedef struct {
-    int64_t* input_ids;        /**< Array of token IDs for each input text. */
-    int64_t* token_type_ids;   /**< Array of token type IDs for each input text. */
-    int64_t* attention_mask;   /**< Array indicating which tokens are actual tokens (1) and which are padding (0). */
-    size_t seq_length;       /**< Maximum sequence length for the input texts. */
-    bool truncated;
-} TokenizedInput;
+#include "GLiClass/gliclass_common.h"
 
 /**
  * Tokenizes a batch of input texts using the provided tokenizer.
@@ -43,12 +15,14 @@ typedef struct {
  * @return A TokenizedInputs structure containing token IDs, token type IDs, and attention masks for the input texts.
  *         The caller is responsible for freeing the memory allocated for the returned structure.
  */
-TokenizedInputs tokenize_inputs(
+GLiClassStatus tokenize_inputs(
     TokenizerHandle tokenizer, 
-    const char* inputs[], 
+    const char** inputs, 
     const size_t num_texts,
-    const size_t min_length, 
-    const size_t max_length
+    const size_t min_length,
+    const size_t max_length,
+    TokenizedInputs* tokenized,
+    GLiClassTokensInfo** info
 );
 
 /**
@@ -61,13 +35,14 @@ TokenizedInputs tokenize_inputs(
  * @return A TokenizedInputs structure containing token IDs, token type IDs, and attention masks for the input texts.
  *         The caller is responsible for freeing the memory allocated for the returned structure.
  */
-TokenizedInput tokenize_input(
+GLiClassStatus tokenize_input(
     TokenizerHandle tokenizer, 
     const char* input,
     const size_t min_length,
-    const size_t max_length
+    const size_t max_length,
+    TokenizedInput* tokenized,
+    GLiClassTokensInfo* info
 );
-
 
 /**
  * Prints the tokenized inputs including input IDs, token type IDs, and attention masks for each input text.
@@ -97,6 +72,6 @@ void free_tokenized_input(TokenizedInput* tokenized);
  * @return A TokenizerHandle initialized with the tokenizer settings from the file, or NULL if the file could not be read.
  *         The caller is responsible for freeing the tokenizer handle after use.
  */
-TokenizerHandle create_tokenizer(const char* filepath);
+GLiClassStatus create_tokenizer(const char* filepath, TokenizerHandle* tokenizer);
 
 #endif // TOKENIZER_H

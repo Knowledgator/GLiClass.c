@@ -6,6 +6,7 @@
 #include "tokenizer.h"
 #include "preprocessor.h"
 #include "utils.h"
+#include "error.h"
 #include "openvino_runtime/model.h"
 #include "openvino_runtime/postprocessor.h"
 
@@ -20,69 +21,47 @@
     #define F_OK 0
 #endif
 
-// Mutex declarations
-#ifndef _WIN32
-static pthread_mutex_t queue_mutex;
-#else
-static HANDLE queue_mutex;
-#endif
+GLiClassStatus gliclass_openvino_infer(
+    GLiClassSession* session,
+    const GLiClassInferenceConfig* config,
+    const TokenizedInput* input,
+    const char* labels[],
+    const size_t num_labels,
+    GLiClassResult* out_results[],
+    size_t* out_num_results
+);
 
-GLiClassSessionOpenVino* gliclass_init_openvino_runtime(
+
+void gliclass_openvino_cleanup(GLiClassOpenVinoSession* session);
+
+
+GLiClassStatus gliclass_openvino_init(
     const char* model_path,
-    const char* model_config_path,
-    const char* tokenizer_path,
     const int num_threads,
     const char* device_type,
-    const bool use_mutex
+    GLiClassProviderAPI** provider
 ) {
-    GLiClassSessionOpenVino* session = (GLiClassSessionOpenVino*)calloc(1, sizeof(GLiClassSessionOpenVino));
+    GLiClassOpenVinoSession* session = (GLiClassOpenVinoSession*)calloc(1, sizeof(GLiClassOpenVinoSession));
     if (!session) {
-        fprintf(stderr, "Unable to allocate session");
-        return NULL;
-    }
-
-    session->use_mutex = use_mutex;
-    if (session->use_mutex) {
-        // Initialize queue mutex
-        #ifndef _WIN32
-        pthread_mutex_init(&queue_mutex, NULL);
-        #else
-        queue_mutex = CreateMutex(NULL, FALSE, NULL);
-        #endif
-    }
-
-    // Initialize the model config
-    session->model_config = initialize_model_config(model_config_path);
-    if (!session->model_config) {
-        fprintf(stderr, "Unable to init model config\n");
-        gliclass_cleanup_openvino(session);
-        return NULL;
-    }
-
-    // Initialize tokenizer
-    session->tokenizer = create_tokenizer(tokenizer_path);
-    if (!session->tokenizer) {
-        fprintf(stderr, "Unable to init tokenizer\n");
-        gliclass_cleanup_openvino(session);
-        return NULL;
+        set_error("Unable to allocate session");
+        return GC_MEMORY_ERROR;
     }
 
     session->core = NULL;
-    ov_status_e status = ov_core_create(&session->core);
+    ov_status_e status = ov_core_create(&(session->core));
     if (status != OK) {
         const char* e = ov_get_error_info(status);
-        fprintf(stderr, "Unable to init OpenVino core: %s", e);
-        gliclass_cleanup_openvino(session);
-        return NULL;
+        set_error("Unable to init OpenVino core: %s: %s", e, ov_get_last_err_msg());
+        gliclass_openvino_cleanup(session);
+        return GC_PROVIDER_ERROR;
     }
 
-    
     char threads[3];
     snprintf(threads, 3, "%d", num_threads);
     session->model = NULL;
     if (num_threads > 0 && strcmp(device_type, "CPU") == 0) {
         status = ov_core_compile_model_from_file(
-            session->core, model_path, device_type, 4, &session->model,
+            session->core, model_path, device_type, 4, &(session->model),
             ov_property_key_hint_performance_mode, "LATENCY",
             ov_property_key_inference_num_threads, threads
         );
@@ -95,89 +74,61 @@ GLiClassSessionOpenVino* gliclass_init_openvino_runtime(
 
     if (status != OK) {
         const char* e = ov_get_error_info(status);
-        fprintf(stderr, "Unable to compile model: %s: %s\n", e, ov_get_last_err_msg());
-        gliclass_cleanup_openvino(session);
-        return NULL;
+        set_error("Unable to compile model: %s: %s\n", e, ov_get_last_err_msg());
+        gliclass_openvino_cleanup(session);
+        return GC_PROVIDER_ERROR;
     }
-    return session;
+
+    *provider = (GLiClassProviderAPI*)calloc(1, sizeof(GLiClassProviderAPI));
+    if (!provider) {
+        set_error("Unable to allocate provider");
+        return GC_MEMORY_ERROR;
+    }
+
+    (*provider)->session = (void*)session;
+    (*provider)->run_inference = gliclass_openvino_infer;
+    // (*provider)->run_inference_batch = gliclass_openvino_infer_batch;
+    (*provider)->run_inference_batch = NULL;
+    (*provider)->cleanup = gliclass_openvino_cleanup;
+    return OK;
 }
 
 
-bool gliclass_infer_openvino(
-    GLiClassSessionOpenVino* session,
+GLiClassStatus gliclass_openvino_infer(
+    GLiClassSession* session,
     const GLiClassInferenceConfig* config,
-    const char* input_text,
+    const TokenizedInput* input,
     const char* labels[],
     const size_t num_labels,
     GLiClassResult* out_results[],
-    size_t* out_num_results,
-    GLiClassTokensInfo* info
+    size_t* out_num_results
 ) {
-    if (!session || !input_text || !labels || num_labels == 0) {
-        fprintf(stderr, "Inputs have invalid value!\n");
-        return false;
-    }
-
-    // Allocate output array for results
-    *out_num_results = 0;
-    *out_results = (GLiClassResult*)calloc(num_labels, sizeof(GLiClassResult));
-    if (!*out_results) {
-        fprintf(stderr, "Unable to allocate results\n");
-        return false;
-    }
-
-    char* input = prepare_input(input_text, labels, num_labels, session->model_config->prompt_first, config->add_prefix_space);
-    if (!input) {
-        fprintf(stderr, "Error while preparing text\n");
-        return false;
-    }
-
-    TokenizedInput tokenized = tokenize_input(
-        session->tokenizer, 
-        (const char*)input,
-        config->min_length,
-        config->max_length
-    );
-    
-    if (info) {
-        info->truncated = tokenized.truncated;
-        info->tokens_num = tokenized.seq_length;
-    }
-
-    if (tokenized.seq_length == 0) {
-        return true;
-    }
-
     ov_tensor_t* input_ids_tensor = NULL;
     ov_tensor_t* attention_mask_tensor = NULL;
-    prepare_input_tensor_openvino(
-        &tokenized,
+    GLiClassStatus status = openvino_prepare_input_tensors(
+        input,
         &input_ids_tensor, 
         &attention_mask_tensor
     );
+    if (status != OK) return status;
 
     ov_tensor_t* output_tensor = NULL;
     if (session->use_mutex) {
-        #ifndef _WIN32
-        pthread_mutex_lock(&queue_mutex);
-        #else
-        WaitForSingleObject(queue_mutex, INFINITE); 
-        #endif
-        output_tensor = run_inference_openvino(session->model, input_ids_tensor, attention_mask_tensor);
-        #ifndef _WIN32
-        pthread_mutex_unlock(&queue_mutex);
-        #else
-        ReleaseMutex(queue_mutex);
-        #endif
+        lock_mutex();
+        status = openvino_run_inference(
+            session->provider->session, input_ids_tensor, attention_mask_tensor, &output_tensor
+        );
+        unlock_mutex();
     } else {
-        output_tensor = run_inference_openvino(session->model, input_ids_tensor, attention_mask_tensor);
+        status = openvino_run_inference(
+            session->provider->session, input_ids_tensor, attention_mask_tensor, &output_tensor
+        );
     }
     ov_tensor_free(input_ids_tensor);
     ov_tensor_free(attention_mask_tensor);
-    free_tokenized_input(&tokenized);
-    free(input);
+    if (status != OK) return status;
     
-    process_output_tensor_openvino(
+    status = openvino_process_output_tensor(
         session,
         config,
         output_tensor, 
@@ -187,21 +138,12 @@ bool gliclass_infer_openvino(
         out_num_results
     );
     ov_tensor_free(output_tensor);
-    return true;
+    return status;
 }
 
 
-void gliclass_cleanup_openvino(GLiClassSessionOpenVino* session) {
+void gliclass_openvino_cleanup(GLiClassOpenVinoSession* session) {
     if (!session) return;
-    if (session->use_mutex) {
-        #ifndef _WIN32
-        pthread_mutex_destroy(&queue_mutex);
-        #else
-        CloseHandle(queue_mutex);
-        #endif
-    }
-    if (session->model_config) free((void*)session->model_config);
-    if (session->tokenizer) tokenizers_free(session->tokenizer);
     if (session->model) ov_compiled_model_free(session->model);
     if (session->core) ov_core_free(session->core);
     free(session);

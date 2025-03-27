@@ -12,7 +12,7 @@ GLiClassStatus read_file(const char* filename, char** content) {
     FILE* file = fopen(filename, "rb");
     if (!file) {
         set_error("Error: Failed to open file %s\n", filename);
-        return LOGICAL_ERROR;
+        return GC_LOGICAL_ERROR;
     }
     fseek(file, 0, SEEK_END);
     long length = ftell(file);
@@ -21,7 +21,7 @@ GLiClassStatus read_file(const char* filename, char** content) {
     fread(content, 1, length, file);
     content[length] = '\0';
     fclose(file);
-    return OK;
+    return GC_OK;
 }
 
 
@@ -29,7 +29,7 @@ GLiClassStatus parse_model_config_json(const char* json_string, GLiClassModelCon
     GLiClassModelConfig* config = (GLiClassModelConfig*)calloc(1, sizeof(GLiClassModelConfig));
     if (!config) {
         fprintf(stderr, "Unable to allocate model config");
-        return MEMORY_ERROR;
+        return GC_MEMORY_ERROR;
     }
 
     // Parse json
@@ -37,7 +37,7 @@ GLiClassStatus parse_model_config_json(const char* json_string, GLiClassModelCon
     if (!json) {
         free(config);
         set_error("Failed to parse JSON: %s\n", cJSON_GetErrorPtr());
-        return FILE_ERROR;
+        return GC_FILE_ERROR;
     }
     
     // Get array texts
@@ -48,10 +48,10 @@ GLiClassStatus parse_model_config_json(const char* json_string, GLiClassModelCon
         free(config);
         cJSON_Delete(json);
         set_error("Unexpected config format, expected 'prompt_first' field of bool type");
-        return FILE_ERROR;
+        return GC_FILE_ERROR;
     }
     
     cJSON_Delete(json);  // free memory
     *config_out = config;
-    return OK;
+    return GC_OK;
 }
