@@ -42,7 +42,7 @@ void process_multi_label(
     size_t* out_num_results
 );
 
-void process_multi_label_batch(
+GLiClassStatus process_multi_label_batch(
     const float* const output_data,
     const size_t batch_size,
     const size_t num_classes,
@@ -65,7 +65,7 @@ void process_single_label(
     size_t* out_num_results
 );
 
-void process_single_label_batch(
+GLiClassStatus process_single_label_batch(
     const float* const output_data,
     const size_t batch_size,
     const size_t num_classes,

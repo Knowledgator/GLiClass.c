@@ -39,7 +39,7 @@ GLiClassStatus ort_prepare_input_tensors_batch(
  * IMPORTANT: The caller is responsible for releasing the output_tensor via g_ort->ReleaseValue(output_tensor)
  */
 GLiClassStatus ort_run_inference(
-    OrtSession* session, OrtValue* input_ids_tensor, OrtValue* attention_mask_tensor, OrtValue** output_tensor
+    GLiClassORTSession* session, OrtValue* input_ids_tensor, OrtValue* attention_mask_tensor, OrtValue** output_tensor
 );
 
 #endif // ONNX_MODEL_H

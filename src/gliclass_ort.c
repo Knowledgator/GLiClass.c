@@ -65,10 +65,10 @@ GLiClassStatus gliclass_ort_infer_batch(
 );
 
 
-void gliclass_ort_cleanup(GLiClassORTSession* session);
+void gliclass_ort_cleanup(void* session);
 
 
-void gliclass_ort_cleanup_custom(GLiClassORTSession* session);
+void gliclass_ort_cleanup_custom(void* session);
 
 
 #ifdef _WIN32
@@ -190,7 +190,7 @@ GLiClassStatus gliclass_ort_cpu_init(
     }
 
     // Create provider session
-    *provider = (GLiClassProviderAPI*)calloc(1, sizeof(GLiClassProviderAPI*));
+    *provider = (GLiClassProviderAPI*)calloc(1, sizeof(GLiClassProviderAPI));
     if (!(*provider)) {
         set_error("Unable to allocate provider");
         g_ort->ReleaseEnv(ort_env);
@@ -273,7 +273,7 @@ GLiClassStatus gliclass_ort_cuda_init(
     }
 
     // Create provider session
-    *provider = (GLiClassProviderAPI*)calloc(1, sizeof(GLiClassProviderAPI*));
+    *provider = (GLiClassProviderAPI*)calloc(1, sizeof(GLiClassProviderAPI));
     if (!(*provider)) {
         set_error("Unable to allocate provider");
         g_ort->ReleaseEnv(ort_env);
@@ -354,7 +354,7 @@ GLiClassStatus gliclass_ort_openvino_init(
     }
 
     // Create provider session
-    *provider = (GLiClassProviderAPI*)calloc(1, sizeof(GLiClassProviderAPI*));
+    *provider = (GLiClassProviderAPI*)calloc(1, sizeof(GLiClassProviderAPI));
     if (!(*provider)) {
         set_error("Unable to allocate provider");
         g_ort->ReleaseEnv(ort_env);
@@ -435,22 +435,26 @@ GLiClassStatus gliclass_ort_infer(
     if (session->use_mutex) {
         lock_mutex();
         status = ort_run_inference(
-            session->provider->session, input_ids_tensor, attention_mask_tensor, &output_tensor
+            (GLiClassORTSession*)(session->provider->session), 
+            input_ids_tensor, attention_mask_tensor, &output_tensor
         );
         unlock_mutex();
     } else {
         status = ort_run_inference(
-            session->provider->session, input_ids_tensor, attention_mask_tensor, &output_tensor
+            (GLiClassORTSession*)(session->provider->session), 
+            input_ids_tensor, attention_mask_tensor, &output_tensor
         );
     }
     g_ort->ReleaseValue(input_ids_tensor);
     g_ort->ReleaseValue(attention_mask_tensor);
 
+    fprintf(stderr, "RUN OK\n");
+    fflush(stderr);
     if (status != GC_OK) {
         return status;
     }
 
-    return ort_process_output_tensor(
+    status = ort_process_output_tensor(
         config,
         output_tensor, 
         labels, 
@@ -458,6 +462,8 @@ GLiClassStatus gliclass_ort_infer(
         *out_results,
         out_num_results
     );
+    g_ort->ReleaseValue(output_tensor);
+    return status;
 }
 
 
@@ -507,20 +513,22 @@ GLiClassStatus gliclass_ort_infer_batch(
         *out_results,
         *out_num_results
     );
-    // Free output tensor after processing
     g_ort->ReleaseValue(output_tensor);
     return status;
 }
 
 
-void gliclass_ort_cleanup(GLiClassORTSession* session) {
-    if (!session) return;
-    if (session->env) g_ort->ReleaseEnv(session->env);
-    if (session->session) g_ort->ReleaseSession(session->session);
+void gliclass_ort_cleanup(void* session) {
+    GLiClassORTSession* ort_session = (GLiClassORTSession*)session;
+    if (!ort_session) return;
+    if (ort_session->session) g_ort->ReleaseSession(ort_session->session);
+    if (ort_session->env) g_ort->ReleaseEnv(ort_session->env);
     free(session);
+    fflush(stderr);
 }
 
 
-void gliclass_ort_cleanup_custom(GLiClassORTSession* session) {
+void gliclass_ort_cleanup_custom(void* session) {
+    if (!session) return;
     free(session);
 }

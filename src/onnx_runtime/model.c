@@ -103,7 +103,7 @@ GLiClassStatus ort_prepare_input_tensors_batch(
 
 
 GLiClassStatus ort_run_inference(
-    OrtSession* session, OrtValue* input_ids_tensor, OrtValue* attention_mask_tensor, OrtValue** output_tensor
+    GLiClassORTSession* session, OrtValue* input_ids_tensor, OrtValue* attention_mask_tensor, OrtValue** output_tensor
 ) {
     OrtStatus* status = NULL;
     OrtRunOptions* run_options = NULL;
@@ -131,7 +131,7 @@ GLiClassStatus ort_run_inference(
 
     // Get the number of output nodes
     size_t num_output_nodes = 0;
-    status = g_ort->SessionGetOutputCount(session, &num_output_nodes);
+    status = g_ort->SessionGetOutputCount(session->session, &num_output_nodes);
     if (status != NULL || num_output_nodes == 0) {
         set_error("Failed to get output nodes count or no output nodes found");
         if (status) g_ort->ReleaseStatus(status);
@@ -140,7 +140,7 @@ GLiClassStatus ort_run_inference(
     }
 
     // Get the name of the output node
-    status = g_ort->SessionGetOutputName(session, 0, allocator, &output_name);
+    status = g_ort->SessionGetOutputName(session->session, 0, allocator, &output_name);
     if (status != NULL) {
         set_error("Failed to get output name");
         g_ort->ReleaseStatus(status);
@@ -149,18 +149,18 @@ GLiClassStatus ort_run_inference(
     }
 
     // Set up input parameters
-    const char* input_names[] = { "input_ids", "attention_mask" };
-    const char* output_names[] = { output_name };
-    OrtValue* input_tensors[] = { input_ids_tensor, attention_mask_tensor };
+    const char* const input_names[] = { "input_ids", "attention_mask" };
+    const char* const output_names[] = { output_name };
+    const OrtValue* const input_tensors[] = { input_ids_tensor, attention_mask_tensor };
 
     // Run inference
     status = g_ort->Run(
-        session,
+        session->session,
         run_options,
         input_names,
-        (const OrtValue* const*)input_tensors,
+        input_tensors,
         2,  // number of input tensors
-        (const char* const*)output_names,
+        output_names,
         1,  // number of output tensors
         output_tensor
     );

@@ -94,7 +94,7 @@ void process_multi_label(
     }
 }
 
-void process_multi_label_batch(
+GLiClassStatus process_multi_label_batch(
     const float* const output_data,
     const size_t batch_size,
     const size_t num_classes,
@@ -110,7 +110,8 @@ void process_multi_label_batch(
     for (size_t i = 0; i < batch_size; i++) {
         out_results[text_id+i] = (GLiClassResult*)calloc(num_classes, sizeof(GLiClassResult));
         if (!out_results[text_id+i]) {
-            fprintf(stderr, "Unable to allocate results");    
+            set_error("Unable to allocate results");    
+            return GC_MEMORY_ERROR;
         }
 
         const char** current_labels = NULL;
@@ -132,6 +133,7 @@ void process_multi_label_batch(
             out_num_results + (text_id+i) // slide to current batch
         );
     }
+    return GC_OK;
 }
 
 void process_single_label(
@@ -165,7 +167,7 @@ void process_single_label(
     *out_num_results += 1;
 }
 
-void process_single_label_batch(
+GLiClassStatus process_single_label_batch(
     const float* const output_data,
     const size_t batch_size,
     const size_t num_classes,
@@ -181,7 +183,8 @@ void process_single_label_batch(
     for (size_t i = 0; i < batch_size; i++) {
         out_results[text_id+i] = (GLiClassResult*)calloc(1, sizeof(GLiClassResult));
         if (!out_results[text_id+i]) {
-            fprintf(stderr, "Unable to allocate results");    
+            set_error("Unable to allocate results");    
+            return GC_MEMORY_ERROR;
         }
 
         const char** current_labels = NULL;
@@ -203,4 +206,5 @@ void process_single_label_batch(
             out_num_results + (text_id+i) // slide to current batch
         );
     }
+    return GC_OK;
 }

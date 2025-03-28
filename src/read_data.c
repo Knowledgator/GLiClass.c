@@ -18,8 +18,12 @@ GLiClassStatus read_file(const char* filename, char** content) {
     long length = ftell(file);
     fseek(file, 0, SEEK_SET);
     *content = (char*)calloc(length + 1, sizeof(char));
-    fread(content, 1, length, file);
-    content[length] = '\0';
+    if (!(*content)) {
+        set_error("Unable to allocate model config");
+        return GC_MEMORY_ERROR;
+    }
+    fread(*content, sizeof(char), length, file);
+    (*content)[length] = '\0';
     fclose(file);
     return GC_OK;
 }
@@ -28,7 +32,7 @@ GLiClassStatus read_file(const char* filename, char** content) {
 GLiClassStatus parse_model_config_json(const char* json_string, GLiClassModelConfig** config_out) {
     GLiClassModelConfig* config = (GLiClassModelConfig*)calloc(1, sizeof(GLiClassModelConfig));
     if (!config) {
-        fprintf(stderr, "Unable to allocate model config");
+        set_error("Unable to allocate model config");
         return GC_MEMORY_ERROR;
     }
 

@@ -9,11 +9,11 @@
 #include "GLiClass/gliclass.h"
 
 GLiClassStatus initialize_model_config(const char* model_config_path, GLiClassModelConfig** model_config_out) {
-    char** json_string = NULL;
-    GLiClassStatus status = read_file(model_config_path, json_string);
+    char* json_string = NULL;
+    GLiClassStatus status = read_file(model_config_path, &json_string);
     if (status != GC_OK) return status;
 
-    status = parse_model_config_json(*json_string, model_config_out);
+    status = parse_model_config_json(json_string, model_config_out);
     free((void*)json_string);
     return status;
 }
@@ -33,7 +33,7 @@ GLiClassStatus gliclass_init_custom_provider(
 
     GLiClassSession* session = calloc(1, sizeof(GLiClassSession));
     if (!session) {
-        fprintf(stderr, "Unable to allocate session");
+        set_error("Unable to allocate session");
         return GC_MEMORY_ERROR;
     };
 
@@ -66,18 +66,25 @@ GLiClassStatus gliclass_init_custom_provider(
 }
 
 
-const char* get_openvino_device(GLiClassDevice device) {
+void openvino_device(GLiClassDevice device, char** device_type) {
     switch (device) {
     case GC_NPU:
-        return "NPU";
+        *device_type = (char*)calloc(4, sizeof(char));
+        snprintf(*device_type, 4, "NPU");
+        return;
     case GC_CPU:
-        return "CPU";
+        *device_type = (char*)calloc(4, sizeof(char));
+        snprintf(*device_type, 4, "CPU");
+        return;
     case GC_GPU:
-        return "GPU";
+        *device_type = (char*)calloc(4, sizeof(char));
+        snprintf(*device_type, 4, "GPU");
+        return;
     default: // GPU with id
-        char device_str[6];    
-        snprintf(device_str, 6, "GPU.%d", device); 
+        *device_type = (char*)calloc(6, sizeof(char));
+        snprintf(*device_type, 6, "GPU.%d", device);
     }
+    return;
 }
 
 
@@ -137,8 +144,10 @@ GLiClassStatus gliclass_init(
             return GC_PROVIDER_ERROR;
         }
 
-        const char* device_type = get_openvino_device(device);
+        char* device_type = NULL;
+        openvino_device(device, &device_type);
         status = gliclass_ort_openvino_init(model_path, num_threads, device_type, &provider_api);
+        free(device_type);
         if (status != GC_OK) return status;
         #else
         set_error("ONNX OpenVino provider is not supported for current build");
@@ -146,8 +155,10 @@ GLiClassStatus gliclass_init(
         #endif
     } else if (provider == GC_OPENVINO) {
         #ifdef USE_OPENVINO
-        const char* device_type = get_openvino_device(device);
+        char* device_type = NULL;
+        openvino_device(device, &device_type);
         status = gliclass_openvino_init(model_path, num_threads, device_type, &provider_api);
+        free(device_type);
         if (status != GC_OK) return status;
         #else
         set_error("OpenVino provider is not supported for current build");
@@ -221,11 +232,9 @@ GLiClassStatus gliclass_infer(
         free(input);
         return GC_OK;
     }
-
     status = session->provider->run_inference(
         session, config, &tokenized, labels, num_labels, out_results, out_num_results
     );
-
     free_tokenized_input(&tokenized);
     free(input);
     return status;
@@ -326,6 +335,9 @@ GLiClassStatus gliclass_infer_batch( // TODO: add quick exit on empty batches
         free_tokenized_inputs(&tokenized);
         if (status != GC_OK) break;
     }
+    if (status != GC_OK) {
+        gliclass_free_results_batch(*out_results, *out_num_results, *out_num_results_size);
+    }
     return status;
 }
 
@@ -335,7 +347,7 @@ void gliclass_cleanup(GLiClassSession* session) {
     if (session->use_mutex) {
         free_mutex();
     }
-    if (session->model_config) free((void*)session->model_config);
+    if (session->model_config) free(session->model_config);
     if (session->tokenizer) tokenizers_free(session->tokenizer);
     gliclass_cleanup_provider(session->provider);
     free(session);

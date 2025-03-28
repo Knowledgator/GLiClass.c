@@ -151,8 +151,9 @@ GLiClassStatus ort_process_output_tensor_batch(
     int64_t batch_size = dims[0];
     int64_t num_classes = dims[1];
     size_t text_id = batch_id * config->batch_size;
+    GLiClassStatus gc_status = GC_OK;
     if (strcmp(config->classification_type, "multi-label") == 0) {    
-        process_multi_label_batch(
+        gc_status = process_multi_label_batch(
             output_data,
             batch_size,
             num_classes,
@@ -165,7 +166,7 @@ GLiClassStatus ort_process_output_tensor_batch(
             out_num_results
         );
     } else if (strcmp(config->classification_type, "single-label") == 0){
-        process_single_label_batch(
+        gc_status = process_single_label_batch(
             output_data,
             batch_size,
             num_classes,
@@ -181,5 +182,5 @@ GLiClassStatus ort_process_output_tensor_batch(
 
     free(dims);
     g_ort->ReleaseTensorTypeAndShapeInfo(type_info);
-    return GC_OK;
+    return gc_status;
 }
