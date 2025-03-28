@@ -6,14 +6,19 @@ int main() {
     const char* model_config_path = "./onnx/config.json";
     const char* tokenizer_path = "./tokenizer/tokenizer.json";
     GLiClassInferenceConfig config;
-    gliclass_create_inference_config(
+    GLiClassStatus* status = gliclass_create_inference_config(
         8, 0, 2048, 0.5, "single-label", true, &config
     );
+    if (status != NULL) {
+        fprintf(stderr, "Invalid config: %s", status->msg);
+        gliclass_free_status(status);
+        return 1;
+    }
 
     // Initialize session (model setup)
     int num_threads= 8;
     GLiClassSession* session = NULL;
-    GLiClassStatus status = gliclass_init(
+    status = gliclass_init(
         model_path,
         model_config_path,
         tokenizer_path,
@@ -23,9 +28,9 @@ int main() {
         GC_CPU,
         &session
     );
-    if (status != GC_OK) {
-        fprintf(stderr, "Unable to create session: %s", gliclass_last_error_message());
-        gliclass_free_error();
+    if (status != NULL) {
+        fprintf(stderr, "Unable to create session: %s", status->msg);
+        gliclass_free_status(status);
         gliclass_cleanup(session);
     }
 
@@ -63,17 +68,17 @@ int main() {
         &results_shape_size,
         NULL
     );
-    if (status != GC_OK) {
-        fprintf(stderr, "Error during inference: %s", gliclass_last_error_message());
-        gliclass_free_error();
+    if (status != NULL) {
+        fprintf(stderr, "Error during inference: %s", status->msg);
+        gliclass_free_status(status);
         gliclass_cleanup(session);
         return 1;
     }
     
     for (size_t i = 0; i < results_shape_size; i++) {
-        fprintf(stdout, "\nText_%ld/%ld: %s\n", i, results_shape_size, texts[i]);
+        fprintf(stdout, "\nText_%zu/%zu: %s\n", i, results_shape_size, texts[i]);
         for (size_t j = 0; j < results_shape[i]; j++) {
-            fprintf(stdout, "Label_%ld: %s, score: %f\n", j, results[i][j].label, results[i][j].score);
+            fprintf(stdout, "Label_%zu: %s, score: %f\n", j, results[i][j].label, results[i][j].score);
         }
     }
     gliclass_free_results_batch(results, results_shape, results_shape_size);

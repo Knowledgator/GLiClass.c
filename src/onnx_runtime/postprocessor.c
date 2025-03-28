@@ -9,7 +9,7 @@
 #include "../error.h"
 #include "model.h"
 
-GLiClassStatus ort_process_output_tensor(
+GLiClassStatus* ort_process_output_tensor(
     const GLiClassInferenceConfig* config,
     OrtValue* output_tensor,
     const char* labels[],
@@ -23,46 +23,41 @@ GLiClassStatus ort_process_output_tensor(
     OrtTensorTypeAndShapeInfo* type_info = NULL;
     status = g_ort->GetTensorTypeAndShape(output_tensor, &type_info);
     if (status != NULL) {
-        set_error("Unable to obtain information about the tensor type and shape.");
         g_ort->ReleaseStatus(status);
-        return GC_INFERENCE_ERROR;
+        return set_error(GC_INFERENCE_ERROR, "Unable to obtain information about the tensor type and shape.");
     }
 
     // Get the number of dimensions
     size_t num_dims = 0;
     status = g_ort->GetDimensionsCount(type_info, &num_dims);
     if (status) {
-        set_error("Failed to get the number of dimensions of the tensor.");
         g_ort->ReleaseTensorTypeAndShapeInfo(type_info);
         g_ort->ReleaseStatus(status);
-        return GC_INFERENCE_ERROR;
+        return set_error(GC_INFERENCE_ERROR, "Failed to get the number of dimensions of the tensor.");
     }
 
     // Get the dimensions of the measurements
     int64_t* dims = (int64_t*)calloc(num_dims, sizeof(int64_t));
     if (!dims) {
-        set_error("Unable to allocate dimensions.");
-        return GC_MEMORY_ERROR;
+        return set_error(GC_MEMORY_ERROR, "Unable to allocate dimensions.");
     }
 
     status = g_ort->GetDimensions(type_info, dims, num_dims);
     if (status) {
-        set_error("Failed to get tensor dimension sizes.");
         free(dims);
         g_ort->ReleaseTensorTypeAndShapeInfo(type_info);
         g_ort->ReleaseStatus(status);
-        return GC_INFERENCE_ERROR;
+        return set_error(GC_INFERENCE_ERROR, "Failed to get tensor dimension sizes.");
     }
 
     // Get a pointer to the tensor data
     float* output_data = NULL;
     status = g_ort->GetTensorMutableData(output_tensor, (void**)&output_data);
     if (status) {
-        fprintf(stderr, "Error: Failed to get tensor data.\n");
         free(dims);
         g_ort->ReleaseTensorTypeAndShapeInfo(type_info);
         g_ort->ReleaseStatus(status);
-        return GC_INFERENCE_ERROR;
+        return set_error(GC_INFERENCE_ERROR, "Error: Failed to get tensor data.");
     }
 
     size_t num_classes = num_labels > (size_t)dims[1] ? (size_t)dims[1] : num_labels;
@@ -88,11 +83,11 @@ GLiClassStatus ort_process_output_tensor(
 
     free(dims);
     g_ort->ReleaseTensorTypeAndShapeInfo(type_info);
-    return GC_OK;
+    return NULL;
 }
 
 
-GLiClassStatus ort_process_output_tensor_batch(
+GLiClassStatus* ort_process_output_tensor_batch(
     const GLiClassInferenceConfig* config,
     OrtValue* output_tensor, 
     const char** labels[],
@@ -108,48 +103,44 @@ GLiClassStatus ort_process_output_tensor_batch(
     OrtTensorTypeAndShapeInfo* type_info = NULL;
     status = g_ort->GetTensorTypeAndShape(output_tensor, &type_info);
     if (status != NULL) {
-        set_error("Unable to obtain information about the tensor type and shape.");
         g_ort->ReleaseStatus(status);
-        return GC_INFERENCE_ERROR;
+        return set_error(GC_INFERENCE_ERROR, "Unable to obtain information about the tensor type and shape.");
     }
 
     // Get the number of dimensions
     size_t num_dims = 0;
     status = g_ort->GetDimensionsCount(type_info, &num_dims);
     if (status != NULL) {
-        set_error("Failed to get the number of dimensions of the tensor.");
         g_ort->ReleaseTensorTypeAndShapeInfo(type_info);
         g_ort->ReleaseStatus(status);
-        return GC_INFERENCE_ERROR;
+        return set_error(GC_INFERENCE_ERROR, "Failed to get the number of dimensions of the tensor.");
     }
 
     // Get the dimensions of the measurements
     int64_t* dims = (int64_t*)calloc(num_dims, sizeof(int64_t));
     status = g_ort->GetDimensions(type_info, dims, num_dims);
     if (status != NULL) {
-        set_error("Failed to get tensor dimension sizes.");
         free(dims);
         g_ort->ReleaseTensorTypeAndShapeInfo(type_info);
         g_ort->ReleaseStatus(status);
-        return GC_INFERENCE_ERROR;
+        return set_error(GC_INFERENCE_ERROR, "Failed to get tensor dimension sizes.");
     }
 
     // Get a pointer to the tensor data
     float* output_data = NULL;
     status = g_ort->GetTensorMutableData(output_tensor, (void**)&output_data);
     if (status != NULL) {
-        set_error("Failed to get tensor data.");
         free(dims);
         g_ort->ReleaseTensorTypeAndShapeInfo(type_info);
         g_ort->ReleaseStatus(status);
-        return GC_INFERENCE_ERROR;
+        return set_error(GC_INFERENCE_ERROR, "Failed to get tensor data.");
     }
 
     // Process logits
     int64_t batch_size = dims[0];
     int64_t num_classes = dims[1];
     size_t text_id = batch_id * config->batch_size;
-    GLiClassStatus gc_status = GC_OK;
+    GLiClassStatus* gc_status = NULL;
     if (strcmp(config->classification_type, "multi-label") == 0) {    
         gc_status = process_multi_label_batch(
             output_data,

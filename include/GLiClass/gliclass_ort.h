@@ -18,7 +18,7 @@ typedef struct GLiClassORTSession {
 GLICLASS_API const OrtApi* gliclass_ort_initialize_api();
 
 // Initialize ORT environment
-GLICLASS_API GLiClassStatus gliclass_ort_create_env(const char* env_name, OrtEnv** env);
+GLICLASS_API GLiClassStatus* gliclass_ort_create_env(const char* env_name, OrtEnv** env);
 
 /**
  * Creates and initializes an ONNX Runtime session from a model file.
@@ -28,15 +28,17 @@ GLICLASS_API GLiClassStatus gliclass_ort_create_env(const char* env_name, OrtEnv
  * @param num_threads The number of threads to use for inference (CPU only).
  * @return A pointer to the OrtSession if successful, or NULL if an error occurs.
  */
-GLICLASS_API GLiClassStatus gliclass_ort_cpu_init(
+GLICLASS_API GLiClassStatus* gliclass_ort_cpu_init(
     const char* model_path, const int num_threads, GLiClassProviderAPI** provider
 );
-GLICLASS_API GLiClassStatus gliclass_ort_openvino_init(
+GLICLASS_API GLiClassStatus* gliclass_ort_openvino_init(
     const char* model_path, const int num_threads, const char* device_type, GLiClassProviderAPI** provider
 );
-GLICLASS_API GLiClassStatus gliclass_ort_cuda_init(
+#ifdef USE_CUDA
+GLICLASS_API GLiClassStatus* gliclass_ort_cuda_init(
     const char* model_path, const int num_threads, const int device_id, GLiClassProviderAPI** provider
 );
+#endif
 
 /**
  * Initialize GLiClass model and tokenizer
@@ -45,7 +47,7 @@ GLICLASS_API GLiClassStatus gliclass_ort_cuda_init(
  * @param num_threads Number of threads
  * @return GLiClassSessionORT handle, or NULL on error
  */
-GLICLASS_API GLiClassStatus gliclass_ort_init_custom(
+GLICLASS_API GLiClassStatus* gliclass_ort_init_custom(
     OrtSession* ort_session, GLiClassProviderAPI** provider
 );
 

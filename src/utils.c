@@ -46,20 +46,19 @@ void free_mutex() {
     #endif
 }
 
-GLiClassStatus flatten_int_array(
+GLiClassStatus* flatten_int_array(
     int64_t** data, size_t rows, size_t cols, int64_t** flat_data
 ) {
     *flat_data = (int64_t*)calloc(rows * cols, sizeof(int64_t));
     if (!(*flat_data)) {
-        set_error("Error: Memory allocation for flat_data failed");
-        return GC_MEMORY_ERROR;
+        return set_error(GC_MEMORY_ERROR, "Error: Memory allocation for flat_data failed");
     }
     for (size_t i = 0; i < rows; ++i) {
         for (size_t j = 0; j < cols; ++j) {
             (*flat_data)[i * cols + j] = data[i][j];
         }
     }
-    return GC_OK;
+    return NULL;
 }
 
 
@@ -87,7 +86,7 @@ void process_multi_label(
     }
 }
 
-GLiClassStatus process_multi_label_batch(
+GLiClassStatus* process_multi_label_batch(
     const float* const output_data,
     const size_t batch_size,
     const size_t num_classes,
@@ -115,8 +114,7 @@ GLiClassStatus process_multi_label_batch(
         current_labels_size = current_labels_size > num_classes ? num_classes : current_labels_size;
         out_results[text_id+i] = (GLiClassResult*)calloc(current_labels_size, sizeof(GLiClassResult));
         if (!out_results[text_id+i]) {
-            set_error("Unable to allocate results");    
-            return GC_MEMORY_ERROR;
+            return set_error(GC_MEMORY_ERROR, "Unable to allocate results");    
         }
         process_multi_label(
             output_data+i*num_classes, // slide to current batch
@@ -127,7 +125,7 @@ GLiClassStatus process_multi_label_batch(
             out_num_results + (text_id+i) // slide to current batch
         );
     }
-    return GC_OK;
+    return NULL;
 }
 
 void process_single_label(
@@ -160,7 +158,7 @@ void process_single_label(
     *out_num_results += 1;
 }
 
-GLiClassStatus process_single_label_batch(
+GLiClassStatus* process_single_label_batch(
     const float* const output_data,
     const size_t batch_size,
     const size_t num_classes,
@@ -176,8 +174,7 @@ GLiClassStatus process_single_label_batch(
     for (size_t i = 0; i < batch_size; i++) {
         out_results[text_id+i] = (GLiClassResult*)calloc(1, sizeof(GLiClassResult));
         if (!out_results[text_id+i]) {
-            set_error("Unable to allocate results");    
-            return GC_MEMORY_ERROR;
+            return set_error(GC_MEMORY_ERROR, "Unable to allocate results");    
         }
 
         const char** current_labels = NULL;
@@ -201,5 +198,5 @@ GLiClassStatus process_single_label_batch(
             out_num_results + (text_id+i) // slide to current batch
         );
     }
-    return GC_OK;
+    return NULL;
 }

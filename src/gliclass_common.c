@@ -6,7 +6,7 @@
 
 #include "error.h"
 
-bool gliclass_create_inference_config(
+GLiClassStatus* gliclass_create_inference_config(
     size_t batch_size,
     size_t min_length,
     size_t max_length,
@@ -17,26 +17,18 @@ bool gliclass_create_inference_config(
 ) {
     char* template = "Inference parameter is invalid: %s";
     if (batch_size == 0) {
-        fprintf(stderr, template, "batch_size shouldn't equal zero");
-        return false;
+        return set_error(GC_LOGICAL_ERROR, template, "batch_size shouldn't equal zero");
     } else if (max_length == 0) {
-        fprintf(stderr, template, "max_length shouldn't equal zero");
-        return false;
+        return set_error(GC_LOGICAL_ERROR, template, "max_length shouldn't equal zero");
     } else if (min_length > max_length) {
-        fprintf(stderr, template, "min_length should be <= max_length");
-        return false;
+        return set_error(GC_LOGICAL_ERROR, "min_length should be <= max_length");
     } else if (threshold < 0 && threshold > 1) {
-        fprintf(stderr, template, "threshold should be in range 0 ... 1");
-        return false;
-    } else if (threshold < 0 && threshold > 1) {
-        fprintf(stderr, template, "threshold should be in range 0 ... 1");
-        return false;
+        return set_error(GC_LOGICAL_ERROR, "threshold should be in range 0 ... 1");
     } else if (
         strcmp(classification_type, "multi-label") != 0
         && strcmp(classification_type, "single-label") != 0
     ) {
-        fprintf(stderr, template, "classification_type should be equal to 'multi-label' or 'single-label'");
-        return false;
+        return set_error(GC_LOGICAL_ERROR, template, "classification_type should be equal to 'multi-label' or 'single-label'");
     }
     config->batch_size = batch_size;
     config->min_length = min_length;
@@ -44,7 +36,7 @@ bool gliclass_create_inference_config(
     config->threshold = threshold;
     config->classification_type = classification_type;
     config->add_prefix_space = add_prefix_space;
-    return true;
+    return NULL;
 }
 
 
@@ -63,10 +55,7 @@ void gliclass_free_results_batch(GLiClassResult** results, size_t* num_results, 
     free(num_results);
 }
 
-char* gliclass_last_error_message() {
-    return last_error->message;
-}
-
-void gliclass_free_error() {
-    free(last_error);
+void gliclass_free_status(GLiClassStatus* status) {
+    if (!status) return;
+    free(status);
 }

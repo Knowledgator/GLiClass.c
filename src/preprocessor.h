@@ -19,7 +19,7 @@
  * @return A dynamically allocated array of strings, where each string contains the prepared input.
  *         The caller is responsible for freeing the memory.
  */
-GLiClassStatus prepare_inputs(
+GLiClassStatus* prepare_inputs(
     GLiClassModelConfig* model_config,
     const GLiClassInferenceConfig* config,
     const char* texts[], 
@@ -41,7 +41,7 @@ GLiClassStatus prepare_inputs(
  * @param prompt_first If true, labels are added before the text; otherwise, they are appended after the text.
  * @return A dynamically allocated string containing the prepared input. The caller is responsible for freeing the memory.
  */
-GLiClassStatus prepare_input(
+GLiClassStatus* prepare_input(
     const char* text, 
     const char** labels,
     size_t num_labels,

@@ -24,13 +24,17 @@ extern "C" {
 #endif
 #include "tokenizers_c.h"
 
-typedef enum GLiClassStatus {
-    GC_OK,
+typedef enum GLiClassStatusCode {
     GC_MEMORY_ERROR,
     GC_LOGICAL_ERROR,
     GC_INFERENCE_ERROR,
     GC_PROVIDER_ERROR,
     GC_FILE_ERROR
+} GLiClassStatusCode;
+
+typedef struct GLiClassStatus {
+    GLiClassStatusCode code;
+    char msg[256];
 } GLiClassStatus;
 
 typedef enum GLiClassProvider {
@@ -123,7 +127,7 @@ typedef struct GLiClassTokensInfo {
 
 typedef struct GLiClassProviderAPI {
     void* session;
-    GLiClassStatus (*run_inference)(
+    GLiClassStatus* (*run_inference)(
         GLiClassSession*, 
         const GLiClassInferenceConfig*, 
         const TokenizedInput*, 
@@ -132,7 +136,7 @@ typedef struct GLiClassProviderAPI {
         GLiClassResult**, 
         size_t*
     );
-    GLiClassStatus (*run_inference_batch)(
+    GLiClassStatus* (*run_inference_batch)(
         GLiClassSession*,
         const GLiClassInferenceConfig*,
         const TokenizedInputs*,
@@ -159,7 +163,7 @@ typedef struct GLiClassProviderAPI {
  * @param add_prefix_space Tokenizer preprocessing config. Adds prefix space to labels and text before tokenization.
  * @param config Output config pointer.
 */
-GLICLASS_API bool gliclass_create_inference_config(
+GLICLASS_API GLiClassStatus* gliclass_create_inference_config(
     size_t batch_size,
     size_t min_length,
     size_t max_length,
@@ -176,9 +180,7 @@ GLICLASS_API void gliclass_free_results(GLiClassResult* results, size_t num_resu
 
 GLICLASS_API void gliclass_free_results_batch(GLiClassResult** results, size_t* num_results, size_t num_results_size);
 
-GLICLASS_API char* gliclass_last_error_message();
-
-GLICLASS_API void gliclass_free_error();
+GLICLASS_API void gliclass_free_status(GLiClassStatus* status);
 
 #ifdef __cplusplus
 }

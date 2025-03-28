@@ -9,7 +9,7 @@
 #include "../error.h"
 #include "model.h"
 
-GLiClassStatus openvino_process_output_tensor(
+GLiClassStatus* openvino_process_output_tensor(
     const GLiClassInferenceConfig* config,
     ov_tensor_t* output_tensor,
     const char* labels[],
@@ -19,13 +19,14 @@ GLiClassStatus openvino_process_output_tensor(
 ) {
     ov_shape_t output_shape = {0};
     ov_status_e status = ov_tensor_get_shape(output_tensor, &output_shape);
+    GLiClassStatus* gc_status = NULL;
     if (status != OK) {
         const char* e_i = ov_get_error_info(status);
         const char* e_m = ov_get_last_err_msg();
-        set_error("Unable to get output tensor shape: %s: %s", e_i, e_m);
+        gc_status = set_error(GC_INFERENCE_ERROR, "Unable to get output tensor shape: %s: %s", e_i, e_m);
         ov_free(e_i);
         ov_free(e_m);
-        return GC_INFERENCE_ERROR;
+        return gc_status;
     }
 
     float* output_data = NULL;
@@ -33,11 +34,11 @@ GLiClassStatus openvino_process_output_tensor(
     if (status != OK) {
         const char* e_i = ov_get_error_info(status);
         const char* e_m = ov_get_last_err_msg();
-        set_error("Unable to get output tensor data: %s: %s", e_i, e_m);
+        gc_status = set_error(GC_INFERENCE_ERROR, "Unable to get output tensor data: %s: %s", e_i, e_m);
         ov_free(e_i);
         ov_free(e_m);
         ov_shape_free(&output_shape);
-        return GC_INFERENCE_ERROR;
+        return gc_status;
     }
 
     size_t num_classes = num_labels > (size_t)output_shape.dims[1] ? (size_t)output_shape.dims[1] : num_labels;
@@ -61,5 +62,5 @@ GLiClassStatus openvino_process_output_tensor(
         );
     }
     ov_shape_free(&output_shape);
-    return GC_OK;
+    return NULL;
 }

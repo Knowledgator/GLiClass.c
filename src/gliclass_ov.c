@@ -21,7 +21,7 @@
     #define F_OK 0
 #endif
 
-GLiClassStatus gliclass_openvino_infer(
+GLiClassStatus* gliclass_openvino_infer(
     GLiClassSession* session,
     const GLiClassInferenceConfig* config,
     const TokenizedInput* input,
@@ -35,7 +35,7 @@ GLiClassStatus gliclass_openvino_infer(
 void gliclass_openvino_cleanup(GLiClassOpenVinoSession* session);
 
 
-GLiClassStatus gliclass_openvino_init(
+GLiClassStatus* gliclass_openvino_init(
     const char* model_path,
     const int num_threads,
     const char* device_type,
@@ -43,17 +43,15 @@ GLiClassStatus gliclass_openvino_init(
 ) {
     GLiClassOpenVinoSession* session = (GLiClassOpenVinoSession*)calloc(1, sizeof(GLiClassOpenVinoSession));
     if (!session) {
-        set_error("Unable to allocate session");
-        return GC_MEMORY_ERROR;
+        return set_error(GC_MEMORY_ERROR, "Unable to allocate session");
     }
 
     session->core = NULL;
     ov_status_e status = ov_core_create(&(session->core));
     if (status != OK) {
         const char* e = ov_get_error_info(status);
-        set_error("Unable to init OpenVino core: %s: %s", e, ov_get_last_err_msg());
         gliclass_openvino_cleanup(session);
-        return GC_PROVIDER_ERROR;
+        return set_error(GC_PROVIDER_ERROR, "Unable to init OpenVino core: %s: %s", e, ov_get_last_err_msg());
     }
 
     char threads[3];
@@ -74,15 +72,13 @@ GLiClassStatus gliclass_openvino_init(
 
     if (status != OK) {
         const char* e = ov_get_error_info(status);
-        set_error("Unable to compile model: %s: %s\n", e, ov_get_last_err_msg());
         gliclass_openvino_cleanup(session);
-        return GC_PROVIDER_ERROR;
+        return set_error(GC_PROVIDER_ERROR, "Unable to compile model: %s: %s\n", e, ov_get_last_err_msg());
     }
 
     *provider = (GLiClassProviderAPI*)calloc(1, sizeof(GLiClassProviderAPI));
     if (!provider) {
-        set_error("Unable to allocate provider");
-        return GC_MEMORY_ERROR;
+        return set_error(GC_MEMORY_ERROR, "Unable to allocate provider");
     }
 
     (*provider)->session = (void*)session;
@@ -90,11 +86,11 @@ GLiClassStatus gliclass_openvino_init(
     // (*provider)->run_inference_batch = gliclass_openvino_infer_batch;
     (*provider)->run_inference_batch = NULL;
     (*provider)->cleanup = gliclass_openvino_cleanup;
-    return OK;
+    return NULL;
 }
 
 
-GLiClassStatus gliclass_openvino_infer(
+GLiClassStatus* gliclass_openvino_infer(
     GLiClassSession* session,
     const GLiClassInferenceConfig* config,
     const TokenizedInput* input,
@@ -105,12 +101,12 @@ GLiClassStatus gliclass_openvino_infer(
 ) {
     ov_tensor_t* input_ids_tensor = NULL;
     ov_tensor_t* attention_mask_tensor = NULL;
-    GLiClassStatus status = openvino_prepare_input_tensors(
+    GLiClassStatus* status = openvino_prepare_input_tensors(
         input,
         &input_ids_tensor, 
         &attention_mask_tensor
     );
-    if (status != OK) return status;
+    if (status != NULL) return status;
 
     ov_tensor_t* output_tensor = NULL;
     if (session->use_mutex) {
@@ -126,7 +122,7 @@ GLiClassStatus gliclass_openvino_infer(
     }
     ov_tensor_free(input_ids_tensor);
     ov_tensor_free(attention_mask_tensor);
-    if (status != OK) return status;
+    if (status != NULL) return status;
     
     status = openvino_process_output_tensor(
         config,

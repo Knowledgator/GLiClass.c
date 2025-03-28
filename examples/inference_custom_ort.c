@@ -39,7 +39,14 @@ int main() {
     int num_threads = 8;
 
     GLiClassInferenceConfig config; 
-    gliclass_create_inference_config(8, 0, 2048, 0.5, "multi-label", false, &config);
+    GLiClassStatus* gc_status = gliclass_create_inference_config(
+        8, 0, 2048, 0.5, "multi-label", false, &config
+    );
+    if (gc_status != NULL) {
+        fprintf(stderr, "Invalid config: %s", gc_status->msg);
+        gliclass_free_status(gc_status);
+        return 1;
+    }
 
     // Initializes the ONNX Runtime API
     if (!gliclass_ort_initialize_api()) return false;
@@ -138,10 +145,10 @@ int main() {
 
     // Initialize session (model setup)
     GLiClassProviderAPI* provider = NULL;
-    GLiClassStatus gc_status = gliclass_ort_init_custom(ort_session, &provider);
-    if (gc_status != GC_OK) {
-        fprintf(stderr, "Unable to create ort custom provider: %s", gliclass_last_error_message());
-        gliclass_free_error();
+    gc_status = gliclass_ort_init_custom(ort_session, &provider);
+    if (gc_status != NULL) {
+        fprintf(stderr, "Unable to create ort custom provider: %s", gc_status->msg);
+        gliclass_free_status(gc_status);
         return 1;
     }
 
@@ -154,9 +161,9 @@ int main() {
         provider,
         &session
     );
-    if (gc_status != GC_OK) {
-        fprintf(stderr, "Unable to create session: %s", gliclass_last_error_message());
-        gliclass_free_error();
+    if (gc_status != NULL) {
+        fprintf(stderr, "Unable to create session: %s", gc_status->msg);
+        gliclass_free_status(gc_status);
         gliclass_cleanup_provider(provider);
         return 1;
     }
@@ -179,9 +186,9 @@ int main() {
         NULL
     );
 
-    if (gc_status != GC_OK) {
-        fprintf(stderr, "Error during inference: %s", gliclass_last_error_message());
-        gliclass_free_error();
+    if (gc_status != NULL) {
+        fprintf(stderr, "Error during inference: %s", gc_status->msg);
+        gliclass_free_status(gc_status);
         gliclass_cleanup(session);
         return 1;
     }

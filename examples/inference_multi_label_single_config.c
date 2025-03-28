@@ -15,7 +15,7 @@ static bool run_inference_with_config(
     GLiClassResult* results = NULL;
     size_t num_results = 0;
 
-    GLiClassStatus status = gliclass_infer(
+    GLiClassStatus* status = gliclass_infer(
         session,
         config,
         text,
@@ -25,9 +25,9 @@ static bool run_inference_with_config(
         &num_results,
         NULL
     );
-    if (status != GC_OK) {
-        fprintf(stderr, "Error during inference: %s", gliclass_last_error_message());
-        gliclass_free_error();
+    if (status != NULL) {
+        fprintf(stderr, "Error during inference: %s", status->msg);
+        gliclass_free_status(status);
         return false;
     }
 
@@ -67,7 +67,7 @@ int main() {
     // Initialize session
     int num_threads= 8;
     GLiClassSession* session = NULL;
-    GLiClassStatus status = gliclass_init(
+    GLiClassStatus* status = gliclass_init(
         model_path,
         model_config_path,
         tokenizer_path,
@@ -77,9 +77,9 @@ int main() {
         GC_CPU,
         &session
     );
-    if (status != GC_OK) {
-        fprintf(stderr, "Unable to create session: %s", gliclass_last_error_message());
-        gliclass_free_error();
+    if (status != NULL) {
+        fprintf(stderr, "Unable to create session: %s", status->msg);
+        gliclass_free_status(status);
         gliclass_cleanup(session);
         return 1;
     }

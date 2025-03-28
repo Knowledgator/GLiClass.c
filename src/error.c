@@ -4,16 +4,17 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-GLiClassError* last_error = NULL;
-
-void set_error(const char* format, ...) {
+GLiClassStatus* set_error(GLiClassStatusCode code, const char* format, ...) {
     va_list args;
     va_start(args, format);
 
-    if (last_error) {
-        free(last_error);
+    GLiClassStatus* status = (GLiClassStatus*)calloc(1, sizeof(GLiClassStatus*));
+    if (!status) {
+        fprintf(stderr, "Unable to allocate status");
+        exit(1);
     }
-    last_error = (GLiClassError*)calloc(1, sizeof(GLiClassError));
-    if (!last_error) return;
-    snprintf(last_error->message, GLICLASS_STATUS_MESSAGE_SIZE, args);
+    status->code = code;
+    vsnprintf(status->msg, GLICLASS_STATUS_MESSAGE_SIZE, format, args);
+    va_end(args);
+    return status;
 }

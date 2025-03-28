@@ -13,7 +13,7 @@ typedef struct GLiClassOpenVinoSession {
     ov_compiled_model_t* model;
 } GLiClassOpenVinoSession;
 
-GLICLASS_API GLiClassStatus gliclass_openvino_init(
+GLICLASS_API GLiClassStatus* gliclass_openvino_init(
     const char* model_path,
     const int num_threads,
     const char* device_type,

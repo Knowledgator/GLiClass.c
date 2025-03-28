@@ -7,7 +7,7 @@
 #include <stdbool.h>
 #include "error.h"
 
-GLiClassStatus prepare_inputs(
+GLiClassStatus* prepare_inputs(
     GLiClassModelConfig* model_config,
     const GLiClassInferenceConfig* config,
     const char* texts[], 
@@ -20,11 +20,10 @@ GLiClassStatus prepare_inputs(
     // Array to store prepared data
     *inputs = (char**)calloc(num_texts, sizeof(char*));
     if (!(*inputs)) {
-        set_error("Cant allocate memory for array inputs");
-        return GC_MEMORY_ERROR;
+        return set_error(GC_MEMORY_ERROR, "Cant allocate memory for array inputs");
     }
 
-    GLiClassStatus status;
+    GLiClassStatus* status;
     for (size_t i = 0; i < num_texts; ++i) {
         if (same_labels){
             status = prepare_input(
@@ -34,8 +33,7 @@ GLiClassStatus prepare_inputs(
             status = prepare_input(texts[i], labels[i], num_labels[i], model_config->prompt_first, config->add_prefix_space, &(*inputs)[i]);
         }
 
-        if (status != GC_OK) {
-            set_error("Error while preparing text with id=%zu", i);
+        if (status != NULL) {
             for (size_t j = 0; j < i; ++j) {
                 free(inputs[j]);
             }
@@ -43,7 +41,7 @@ GLiClassStatus prepare_inputs(
             return status;
         }
     }
-    return GC_OK;
+    return NULL;
 }
 
 
@@ -72,7 +70,7 @@ void append_labels(
 }
 
 
-GLiClassStatus prepare_input(
+GLiClassStatus* prepare_input(
     const char* text, 
     const char** labels,
     size_t num_labels,
@@ -93,8 +91,7 @@ GLiClassStatus prepare_input(
 
     *input = (char*)calloc(total_len, sizeof(char));
     if (!(*input)) {
-        set_error("Unable allocate memmory for result prepared string");
-        return GC_MEMORY_ERROR;
+        return set_error(GC_MEMORY_ERROR, "Unable allocate memmory for result prepared string");
     }
 
     if (prompt_first) {
@@ -113,7 +110,7 @@ GLiClassStatus prepare_input(
         strcat_s(*input, total_len, sep_tag);
     }
 
-    return GC_OK;
+    return NULL;
 }
 
 /**

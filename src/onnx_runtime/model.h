@@ -13,7 +13,7 @@
  * @param attention_mask_tensor A pointer to the OrtValue that will store the attention mask tensor.
  * @return 0 if successful, -1 if an error occurs during tensor preparation.
  */
-GLiClassStatus ort_prepare_input_tensors(
+GLiClassStatus* ort_prepare_input_tensors(
     const TokenizedInput* tokenized, OrtValue** input_ids_tensor, OrtValue** attention_mask_tensor
 );
 
@@ -25,7 +25,7 @@ GLiClassStatus ort_prepare_input_tensors(
  * @param attention_mask_tensor A pointer to the OrtValue that will store the attention mask tensor.
  * @return 0 if successful, -1 if an error occurs during tensor preparation.
  */
-GLiClassStatus ort_prepare_input_tensors_batch(
+GLiClassStatus* ort_prepare_input_tensors_batch(
     const TokenizedInputs* tokenized, OrtValue** input_ids_tensor, OrtValue** attention_mask_tensor
 );
 
@@ -38,7 +38,7 @@ GLiClassStatus ort_prepare_input_tensors_batch(
  * @return A pointer to an OrtValue containing the model's output, or NULL if inference fails.
  * IMPORTANT: The caller is responsible for releasing the output_tensor via g_ort->ReleaseValue(output_tensor)
  */
-GLiClassStatus ort_run_inference(
+GLiClassStatus* ort_run_inference(
     GLiClassORTSession* session, OrtValue* input_ids_tensor, OrtValue* attention_mask_tensor, OrtValue** output_tensor
 );
 

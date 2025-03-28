@@ -12,7 +12,7 @@
  * @param num_labels A dynamic array indicating the number of labels for each text.
  * @param out_results Pointer to results
  */
-GLiClassStatus ort_process_output_tensor(
+GLiClassStatus* ort_process_output_tensor(
     const GLiClassInferenceConfig* config,
     OrtValue* output_tensor,
     const char* labels[],
@@ -33,7 +33,7 @@ GLiClassStatus ort_process_output_tensor(
  * @param out_results Pointer to results
  * @param out_num_results Results shape 
  */
-GLiClassStatus ort_process_output_tensor_batch(
+GLiClassStatus* ort_process_output_tensor_batch(
     const GLiClassInferenceConfig* config,
     OrtValue* output_tensor, 
     const char** labels[],

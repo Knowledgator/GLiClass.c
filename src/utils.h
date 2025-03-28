@@ -12,7 +12,7 @@
  * @return A pointer to a dynamically allocated 1D int64_t array.
  *         The caller is responsible for freeing the allocated memory.
  */
-GLiClassStatus flatten_int_array(
+GLiClassStatus* flatten_int_array(
     int64_t** data, size_t rows, size_t cols, int64_t** flast_data
 );
 
@@ -41,7 +41,7 @@ void process_multi_label(
     size_t* out_num_results
 );
 
-GLiClassStatus process_multi_label_batch(
+GLiClassStatus* process_multi_label_batch(
     const float* const output_data,
     const size_t batch_size,
     const size_t num_classes,
@@ -63,7 +63,7 @@ void process_single_label(
     size_t* out_num_results
 );
 
-GLiClassStatus process_single_label_batch(
+GLiClassStatus* process_single_label_batch(
     const float* const output_data,
     const size_t batch_size,
     const size_t num_classes,

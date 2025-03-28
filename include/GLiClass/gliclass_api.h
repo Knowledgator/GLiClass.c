@@ -14,7 +14,7 @@ extern "C" {
  * @param num_threads Number of threads
  * @return GLiClassSession handle, or NULL on error
  */
-GLICLASS_API GLiClassStatus gliclass_init(
+GLICLASS_API GLiClassStatus* gliclass_init(
     const char* model_path, 
     const char* model_config_path,
     const char* tokenizer_path,
@@ -25,7 +25,7 @@ GLICLASS_API GLiClassStatus gliclass_init(
     GLiClassSession** session_out
 );
 
-GLICLASS_API GLiClassStatus gliclass_init_custom_provider(
+GLICLASS_API GLiClassStatus* gliclass_init_custom_provider(
     const char* model_config_path,
     const char* tokenizer_path,
     const int num_threads,
@@ -47,7 +47,7 @@ GLICLASS_API GLiClassStatus gliclass_init_custom_provider(
  * (i.e., the number of tokens was reduced to the max_length specified in the inference config).
  * @return true on success, false on error
  */
-GLICLASS_API GLiClassStatus gliclass_infer(
+GLICLASS_API GLiClassStatus* gliclass_infer(
     GLiClassSession* session,
     const GLiClassInferenceConfig* config,
     const char* input_text,
@@ -73,7 +73,7 @@ GLICLASS_API GLiClassStatus gliclass_infer(
  * the array represents each processed input (per text-labels pair).
  * @return true on success, false on error
  */
-GLICLASS_API GLiClassStatus gliclass_infer_batch( // TODO: add quick exit on empty batches
+GLICLASS_API GLiClassStatus* gliclass_infer_batch( // TODO: add quick exit on empty batches
     GLiClassSession* session,
     const GLiClassInferenceConfig* config,
     const char* input_texts[],

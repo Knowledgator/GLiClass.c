@@ -15,7 +15,7 @@
  * @return A TokenizedInputs structure containing token IDs, token type IDs, and attention masks for the input texts.
  *         The caller is responsible for freeing the memory allocated for the returned structure.
  */
-GLiClassStatus tokenize_inputs(
+GLiClassStatus* tokenize_inputs(
     TokenizerHandle tokenizer, 
     const char** inputs, 
     const size_t num_texts,
@@ -35,7 +35,7 @@ GLiClassStatus tokenize_inputs(
  * @return A TokenizedInputs structure containing token IDs, token type IDs, and attention masks for the input texts.
  *         The caller is responsible for freeing the memory allocated for the returned structure.
  */
-GLiClassStatus tokenize_input(
+GLiClassStatus* tokenize_input(
     TokenizerHandle tokenizer, 
     const char* input,
     const size_t min_length,
@@ -72,6 +72,6 @@ void free_tokenized_input(TokenizedInput* tokenized);
  * @return A TokenizerHandle initialized with the tokenizer settings from the file, or NULL if the file could not be read.
  *         The caller is responsible for freeing the tokenizer handle after use.
  */
-GLiClassStatus create_tokenizer(const char* filepath, TokenizerHandle* tokenizer);
+GLiClassStatus* create_tokenizer(const char* filepath, TokenizerHandle* tokenizer);
 
 #endif // TOKENIZER_H

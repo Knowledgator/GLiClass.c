@@ -8,40 +8,36 @@
 
 #include "error.h"
 
-GLiClassStatus read_file(const char* filename, char** content) {
+GLiClassStatus* read_file(const char* filename, char** content) {
     FILE* file = fopen(filename, "rb");
     if (!file) {
-        set_error("Error: Failed to open file %s\n", filename);
-        return GC_LOGICAL_ERROR;
+        return set_error(GC_LOGICAL_ERROR, "Error: Failed to open file %s\n", filename);
     }
     fseek(file, 0, SEEK_END);
     long length = ftell(file);
     fseek(file, 0, SEEK_SET);
     *content = (char*)calloc(length + 1, sizeof(char));
     if (!(*content)) {
-        set_error("Unable to allocate model config");
-        return GC_MEMORY_ERROR;
+        return set_error(GC_MEMORY_ERROR, "Unable to allocate model config");
     }
     fread(*content, sizeof(char), length, file);
     (*content)[length] = '\0';
     fclose(file);
-    return GC_OK;
+    return NULL;
 }
 
 
-GLiClassStatus parse_model_config_json(const char* json_string, GLiClassModelConfig** config_out) {
+GLiClassStatus* parse_model_config_json(const char* json_string, GLiClassModelConfig** config_out) {
     GLiClassModelConfig* config = (GLiClassModelConfig*)calloc(1, sizeof(GLiClassModelConfig));
     if (!config) {
-        set_error("Unable to allocate model config");
-        return GC_MEMORY_ERROR;
+        return set_error(GC_MEMORY_ERROR, "Unable to allocate model config");
     }
 
     // Parse json
     cJSON* json = cJSON_Parse(json_string);
     if (!json) {
         free(config);
-        set_error("Failed to parse JSON: %s\n", cJSON_GetErrorPtr());
-        return GC_FILE_ERROR;
+        return set_error(GC_FILE_ERROR, "Failed to parse JSON: %s\n", cJSON_GetErrorPtr());
     }
     
     // Get array texts
@@ -51,11 +47,10 @@ GLiClassStatus parse_model_config_json(const char* json_string, GLiClassModelCon
     } else {
         free(config);
         cJSON_Delete(json);
-        set_error("Unexpected config format, expected 'prompt_first' field of bool type");
-        return GC_FILE_ERROR;
+        return set_error(GC_FILE_ERROR, "Unexpected config format, expected 'prompt_first' field of bool type");
     }
     
     cJSON_Delete(json);  // free memory
     *config_out = config;
-    return GC_OK;
+    return NULL;
 }

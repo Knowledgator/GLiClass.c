@@ -16,7 +16,7 @@
 
 #include "error.h"
 
-GLiClassStatus tokenize_inputs(
+GLiClassStatus* tokenize_inputs(
     TokenizerHandle tokenizer, 
     const char** inputs, 
     const size_t num_texts,
@@ -29,8 +29,7 @@ GLiClassStatus tokenize_inputs(
         (TokenizerEncodeResult*)calloc(num_texts, sizeof(TokenizerEncodeResult))
     );
     if (!results) {
-        set_error("Error while allocating memmory for tokenization results");
-        return GC_MEMORY_ERROR;
+        return set_error(GC_MEMORY_ERROR, "Error while allocating memmory for tokenization results");
     }
 
     // Get len of each text
@@ -45,10 +44,9 @@ GLiClassStatus tokenize_inputs(
     // We trim the sequences to max_length and find the maximum length after trimming
     size_t* seq_lengths = (size_t*)calloc(num_texts, sizeof(size_t));
     if (!seq_lengths) {
-        set_error("Error while allocating memory for sequence lengths");
         free(results);
         free(input_lengths);
-        return GC_MEMORY_ERROR;
+        return set_error(GC_MEMORY_ERROR, "Error while allocating memory for sequence lengths");
     }
 
     // Mem alloc for tokenized data
@@ -102,10 +100,10 @@ GLiClassStatus tokenize_inputs(
     tokenizers_free_encode_results(results, num_texts);
     free(input_lengths);
     free(seq_lengths);
-    return GC_OK;
+    return NULL;
 }
 
-GLiClassStatus tokenize_input(
+GLiClassStatus* tokenize_input(
     TokenizerHandle tokenizer, 
     const char* input,
     const size_t min_length,
@@ -124,7 +122,7 @@ GLiClassStatus tokenize_input(
         tokenized->seq_length = 0;
         truncated = true;
         tokenizers_free_encode_results(&result, 1);
-        return GC_OK;
+        return NULL;
     } else if (result.len > max_length) {
         tokenized->seq_length = max_length;
         truncated = true;
@@ -143,8 +141,7 @@ GLiClassStatus tokenize_input(
     tokenized->token_type_ids = (int64_t*)calloc(tokenized->seq_length, sizeof(int64_t));
     tokenized->attention_mask = (int64_t*)calloc(tokenized->seq_length, sizeof(int64_t));
     if (!tokenized->input_ids || !tokenized->token_type_ids || !tokenized->attention_mask) {
-        set_error("Unable to allocate tokenized inputs");
-        return GC_MEMORY_ERROR;
+        return set_error(GC_MEMORY_ERROR, "Unable to allocate tokenized inputs");
     }
 
     for (size_t j = 0; j < tokenized->seq_length; ++j) {
@@ -154,7 +151,7 @@ GLiClassStatus tokenize_input(
     }
 
     tokenizers_free_encode_results(&result, 1);
-    return GC_OK;
+    return NULL;
 }
 
 void print_tokenized_inputs(const TokenizedInputs* tokenized) {
@@ -197,18 +194,16 @@ void free_tokenized_input(TokenizedInput* tokenized) {
     free(tokenized->attention_mask);
 }
 
-GLiClassStatus create_tokenizer(const char* filepath, TokenizerHandle* tokenizer) {
+GLiClassStatus* create_tokenizer(const char* filepath, TokenizerHandle* tokenizer) {
     // Check existence
     if (access(filepath, F_OK) != 0) {
-        set_error("Tokenizer file not found at path: %s", filepath);
-        return GC_FILE_ERROR;
+        return set_error(GC_FILE_ERROR, "Tokenizer file not found at path: %s", filepath);
     }
 
     // Read tokenizer.json
     FILE* file = fopen(filepath, "rb");
     if (!file) {
-        set_error("Cant open file %s", filepath);
-        return GC_FILE_ERROR;
+        return set_error(GC_FILE_ERROR, "Cant open file %s", filepath);
     }
 
     fseek(file, 0, SEEK_END);
@@ -218,18 +213,16 @@ GLiClassStatus create_tokenizer(const char* filepath, TokenizerHandle* tokenizer
     // Allocate memory for JSON
     char* json = (char*)calloc(json_len + 1, sizeof(char));
     if (!json) {
-        set_error("Cant allocate memory for JSON");
         fclose(file);
-        return GC_MEMORY_ERROR;
+        return set_error(GC_MEMORY_ERROR, "Cant allocate memory for JSON");
     }
 
     // Read file
     size_t read_len = fread(json, 1, json_len, file);
     fclose(file);
     if (read_len != json_len) {
-        set_error("Failed to read %s", filepath);
         free(json);
-        return GC_MEMORY_ERROR;
+        return set_error(GC_MEMORY_ERROR, "Failed to read %s", filepath);
     }
     json[json_len] = '\0'; // Add last null sym
 
@@ -238,9 +231,8 @@ GLiClassStatus create_tokenizer(const char* filepath, TokenizerHandle* tokenizer
     free(json); // Free memory after initializing
 
     if (!(*tokenizer)) {
-        set_error("Cant create tokenizer from %s", filepath);
-        return GC_FILE_ERROR;
+        return set_error(GC_FILE_ERROR, "Cant create tokenizer from %s", filepath);
     }
 
-    return GC_OK;
+    return NULL;
 }

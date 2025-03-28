@@ -42,14 +42,19 @@ int main() {
     const char* tokenizer_path = "./tokenizer/tokenizer.json";
 
     GLiClassInferenceConfig config;
-    gliclass_create_inference_config(
+    GLiClassStatus* status = gliclass_create_inference_config(
         8, 0, 2048, 0.0, "multi-label", true, &config
     );
+    if (status != NULL) {
+        fprintf(stderr, "Invalid config: %s", status->msg);
+        gliclass_free_status(status);
+        return 1;
+    }
 
     // Initialize session (model setup)
     int num_threads= 8;
     GLiClassSession* session = NULL;
-    GLiClassStatus status = gliclass_init(
+    status = gliclass_init(
         model_path,
         model_config_path,
         tokenizer_path,
@@ -59,9 +64,9 @@ int main() {
         GC_CPU,
         &session
     );
-    if (status != GC_OK) {
-        fprintf(stderr, "Unable to create session: %s", gliclass_last_error_message());
-        gliclass_free_error();
+    if (status != NULL) {
+        fprintf(stderr, "Unable to create session: %s", status->msg);
+        gliclass_free_status(status);
         gliclass_cleanup(session);
     }
 
@@ -87,9 +92,9 @@ int main() {
     time = (double)clock() / CLOCKS_PER_SEC - time;
     fprintf(stdout, "Elapsed: %f s\n", time);
 
-    if (status != GC_OK) {
-        fprintf(stderr, "Error during inference: %s", gliclass_last_error_message());
-        gliclass_free_error();
+    if (status != NULL) {
+        fprintf(stderr, "Error during inference: %s", status->msg);
+        gliclass_free_status(status);
         return 1;
     }
     

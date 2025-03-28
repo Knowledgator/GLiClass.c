@@ -4,7 +4,7 @@
 #include "GLiClass/gliclass_ov.h"
 #include "../tokenizer.h"
 
-GLiClassStatus openvino_prepare_input_tensors(
+GLiClassStatus* openvino_prepare_input_tensors(
     const TokenizedInput* tokenized, ov_tensor_t** input_ids_tensor, ov_tensor_t** attention_mask_tensor
 );
 
@@ -17,7 +17,7 @@ GLiClassStatus openvino_prepare_input_tensors(
  * @return A pointer to an OrtValue containing the model's output, or NULL if inference fails.
  * IMPORTANT: The caller is responsible for releasing the output_tensor via g_ort->ReleaseValue(output_tensor)
  */
-GLiClassStatus openvino_run_inference(
+GLiClassStatus* openvino_run_inference(
     GLiClassOpenVinoSession* session, 
     ov_tensor_t* input_ids_tensor, 
     ov_tensor_t* attention_mask_tensor, 
