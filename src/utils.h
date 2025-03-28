@@ -34,7 +34,6 @@ void free_mutex();
 
 void process_multi_label(
     const float* const output_data,
-    const size_t num_classes,
     const char* labels[],
     const size_t num_labels,
     const float threshold,
@@ -57,7 +56,6 @@ GLiClassStatus process_multi_label_batch(
 
 void process_single_label(
     const float* const output_data,
-    const size_t num_classes,
     const char* labels[],
     const size_t num_labels,
     const float threshold,

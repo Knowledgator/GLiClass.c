@@ -65,13 +65,12 @@ GLiClassStatus ort_process_output_tensor(
         return GC_INFERENCE_ERROR;
     }
 
-    int64_t num_classes = dims[1];
+    size_t num_classes = num_labels > (size_t)dims[1] ? (size_t)dims[1] : num_labels;
     if (strcmp(config->classification_type, "multi-label") == 0) {    
         process_multi_label(
             output_data,
-            num_classes,
             labels,
-            num_labels,
+            num_classes,
             config->threshold,
             out_results,
             out_num_results
@@ -79,9 +78,8 @@ GLiClassStatus ort_process_output_tensor(
     } else if (strcmp(config->classification_type, "single-label") == 0){
         process_single_label(
             output_data,
-            num_classes,
             labels,
-            num_labels,
+            num_classes,
             config->threshold,
             out_results,
             out_num_results

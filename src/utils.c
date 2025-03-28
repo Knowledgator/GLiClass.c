@@ -70,26 +70,19 @@ float sigmoid(float x) {
 
 void process_multi_label(
     const float* const output_data,
-    const size_t num_classes,
     const char* labels[],
     const size_t num_labels,
     const float threshold,
     GLiClassResult out_results[],
     size_t* out_num_results
 ) {
-    for (size_t j = 0; j < num_classes; j++) {
-        float logit = output_data[j];
+    for (size_t i = 0; i < num_labels; i++) {
+        float logit = output_data[i];
         float prob = sigmoid(logit);  // sigmoid function
 
         if (prob < threshold) continue;
 
-        const char* label = NULL;
-        if (j < num_labels) {
-            label = labels[j];
-        }
-    
-        if (!label) label = "[Unknown]";
-        out_results[*out_num_results] = (GLiClassResult){(char*)label, prob};
+        out_results[*out_num_results] = (GLiClassResult){(char*)labels[i], prob};
         *out_num_results += 1;
     }
 }
@@ -108,12 +101,7 @@ GLiClassStatus process_multi_label_batch(
 ) {
     bool same_labels = num_labels_size == 1;
     for (size_t i = 0; i < batch_size; i++) {
-        out_results[text_id+i] = (GLiClassResult*)calloc(num_classes, sizeof(GLiClassResult));
-        if (!out_results[text_id+i]) {
-            set_error("Unable to allocate results");    
-            return GC_MEMORY_ERROR;
-        }
-
+        
         const char** current_labels = NULL;
         size_t current_labels_size;
         if (same_labels) {
@@ -123,9 +111,15 @@ GLiClassStatus process_multi_label_batch(
             current_labels = labels[i];
             current_labels_size = num_labels[i];
         }
+
+        current_labels_size = current_labels_size > num_classes ? num_classes : current_labels_size;
+        out_results[text_id+i] = (GLiClassResult*)calloc(current_labels_size, sizeof(GLiClassResult));
+        if (!out_results[text_id+i]) {
+            set_error("Unable to allocate results");    
+            return GC_MEMORY_ERROR;
+        }
         process_multi_label(
             output_data+i*num_classes, // slide to current batch
-            num_classes,
             current_labels,
             current_labels_size,
             threshold,
@@ -138,7 +132,6 @@ GLiClassStatus process_multi_label_batch(
 
 void process_single_label(
     const float* const output_data,
-    const size_t num_classes,
     const char* labels[],
     const size_t num_labels,
     const float threshold,
@@ -147,12 +140,12 @@ void process_single_label(
 ) {
     float max_prob = 0.0f; // TODO: skip first class
     size_t max_idx = 0;
-    for (size_t j = 0; j < num_classes; j++) {
-        float logit = output_data[j];
+    for (size_t i = 0; i < num_labels; i++) {
+        float logit = output_data[i];
         float prob = sigmoid(logit);  // sigmoid function
         if (prob > max_prob) {
             max_prob = prob;
-            max_idx = j;
+            max_idx = i;
         }
     }
     if (max_prob < threshold) return;
@@ -196,9 +189,11 @@ GLiClassStatus process_single_label_batch(
             current_labels = labels[i];
             current_labels_size = num_labels[i];
         }
+
+        current_labels_size = current_labels_size > num_classes ? num_classes : current_labels_size;
+
         process_single_label(
             output_data+i*num_classes, // slide to current batch
-            num_classes,
             current_labels,
             current_labels_size,
             threshold,
