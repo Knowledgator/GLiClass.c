@@ -129,7 +129,6 @@ GLiClassStatus gliclass_openvino_infer(
     if (status != OK) return status;
     
     status = openvino_process_output_tensor(
-        session,
         config,
         output_tensor, 
         labels, 

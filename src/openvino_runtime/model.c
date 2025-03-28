@@ -47,7 +47,7 @@ GLiClassStatus openvino_prepare_input_tensors(
     }
 
     status = openvino_create_tensor(
-        tokenized->input_ids, input_type, input_shape, attention_mask_tensor
+        tokenized->attention_mask, input_type, input_shape, attention_mask_tensor
     );
     if (status != GC_OK) {
         ov_tensor_free(*input_ids_tensor);
