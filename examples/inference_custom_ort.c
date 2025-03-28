@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include "onnxruntime_c_api.h"
-#include "GLiClass/gliclass_api.h"
+#include "GLiClass/gliclass.h"
 #ifndef _WIN32
     #include <unistd.h>
 #else
@@ -13,19 +13,20 @@
 
 #ifdef _WIN32
 wchar_t* convert_path(const char* path) {
-    size_t len = mbstowcs(NULL, path, 0);
+    size_t len = strlen(path) + 1;
     if(len == (size_t)-1) {
         fprintf(stderr, "Error: Unable to convert path to wchar_t*: %s\n", path);
         return NULL;
     }
 
-    wchar_t *wide_str = malloc((len + 1) * sizeof(wchar_t));
+    wchar_t *wide_str = (wchar_t*)calloc(len, sizeof(wchar_t));
     if(!wide_str) {
         fprintf(stderr, "Error: Unable to convert path to wchar_t*: %s\n", path);
         return NULL;
     }
 
-    mbstowcs(wide_str, path, len + 1);
+    size_t converted = 0;
+    mbstowcs_s(&converted, wide_str, len, path, len);
     return wide_str;
 }
 #endif
@@ -35,13 +36,13 @@ int main() {
     const char* model_config_path = "./onnx/config.json";
     const char* tokenizer_path = "./tokenizer/tokenizer.json";
 
-    size_t num_threads = 8;
+    int num_threads = 8;
 
     GLiClassInferenceConfig config; 
     gliclass_create_inference_config(8, 0, 2048, 0.5, "multi-label", false, &config);
 
     // Initializes the ONNX Runtime API
-    if (!gliclass_initialize_ort_api()) return false;
+    if (!gliclass_ort_initialize_api()) return false;
 
     OrtEnv* ort_env = NULL;
     OrtSessionOptions* ort_session_options = NULL;
@@ -136,12 +137,29 @@ int main() {
     g_ort->ReleaseSessionOptions(ort_session_options);
 
     // Initialize session (model setup)
-    GLiClassSession* session = gliclass_init_custom_ort(
+    GLiClassProviderAPI* provider = NULL;
+    GLiClassStatus gc_status = gliclass_ort_init_custom(ort_session, &provider);
+    if (gc_status != GC_OK) {
+        fprintf(stderr, "Unable to create ort custom provider: %s", gliclass_last_error_message());
+        gliclass_free_error();
+        return 1;
+    }
+
+    GLiClassSession* session = NULL;
+    gc_status = gliclass_init_custom_provider(
         model_config_path,
         tokenizer_path,
-        false,
-        ort_session
+        num_threads,
+        false, // use_mutex
+        provider,
+        &session
     );
+    if (gc_status != GC_OK) {
+        fprintf(stderr, "Unable to create session: %s", gliclass_last_error_message());
+        gliclass_free_error();
+        gliclass_cleanup_provider(provider);
+        return 1;
+    }
 
     const char* text = "ONNX is an open-source format designed to enable the interoperability of AI models.";
     const char* labels[] = {"format","model","tool","necessity"};
@@ -149,9 +167,8 @@ int main() {
 
     GLiClassResult* results = NULL;
     size_t num_results = 0;
-    bool truncated = false;
 
-    bool ok = gliclass_infer(
+    gc_status = gliclass_infer(
         session, 
         &config,
         text, 
@@ -159,22 +176,23 @@ int main() {
         num_labels,
         &results,
         &num_results,
-        &truncated
+        NULL
     );
 
-    if (!ok) {
-        fprintf(stderr, "Errors occur during inference!");
+    if (gc_status != GC_OK) {
+        fprintf(stderr, "Error during inference: %s", gliclass_last_error_message());
+        gliclass_free_error();
         gliclass_cleanup(session);
         return 1;
     }
     
     fprintf(stdout, "\nText: %s\n", text);
-    fprintf(stdout, "\nTruncated: %s\n", truncated ? "true": "false");
     for (size_t i = 0; i < num_results; i++) {
-        fprintf(stdout, "Label_%ld: %s, score: %f\n", i, results[i].label, results[i].score);
+        fprintf(stdout, "Label_%zu: %s, score: %f\n", i, results[i].label, results[i].score);
     }
     gliclass_free_results(results, num_results);
     gliclass_cleanup(session);
-
+    g_ort->ReleaseEnv(ort_env);
+    g_ort->ReleaseSession(ort_session);
     return 0;
 }

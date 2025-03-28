@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "GLiClass/gliclass_api.h"
+#include "GLiClass/gliclass.h"
 
 int main() {
     const char* model_path = "./onnx/model.onnx";
@@ -12,17 +12,22 @@ int main() {
     );
 
     // Initialize session (model setup)
-    GLiClassSession* session = gliclass_init(
+    int num_threads= 8;
+    GLiClassSession* session = NULL;
+    GLiClassStatus status = gliclass_init(
         model_path,
         model_config_path,
         tokenizer_path,
-        8,
-        false
+        num_threads,
+        false,
+        GC_ONNX,
+        GC_CPU,
+        &session
     );
-
-    if (!session) {
-        fprintf(stderr, "Failed to initialize GLiClass session!\n");
-        return 1;
+    if (status != GC_OK) {
+        fprintf(stderr, "Unable to create session: %s", gliclass_last_error_message());
+        gliclass_free_error();
+        gliclass_cleanup(session);
     }
 
     const char* texts[] = {
@@ -41,8 +46,7 @@ int main() {
         "Electronics",
         "Entertainment",
         "Finance",
-        "Fitness"
-        /*
+        "Fitness",
         "Food",
         "Games",
         "Government",
@@ -61,7 +65,6 @@ int main() {
         "Sports",
         "Telecom",
         "Travel"
-        */
     };
     const size_t num_labels = 10;
 
@@ -70,7 +73,7 @@ int main() {
         GLiClassResult* results = NULL;
         size_t num_results = 0;
 
-        bool ok = gliclass_infer(
+        status = gliclass_infer(
             session,
             &config,
             texts[t],
@@ -80,18 +83,17 @@ int main() {
             &num_results,
             NULL
         );
-
-        if (!ok) {
-            fprintf(stderr, "Errors occurred during inference on text %ld!\n", t + 1);
-            gliclass_cleanup(session);
+        if (status != GC_OK) {
+            fprintf(stderr, "Error during inference: %s", gliclass_last_error_message());
+            gliclass_free_error();
             return 1;
         }
 
         // Print results
-        printf("\nText %ld: %s\n", t + 1, texts[t]);
-        printf("num_results: %ld\n", num_results);
+        printf("\nText %zu: %s\n", t + 1, texts[t]);
+        printf("num_results: %zu\n", num_results);
         for (size_t i = 0; i < num_results; ++i) {
-            printf("Label_%ld: %s, Score: %f\n", i, results[i].label, results[i].score);
+            printf("Label_%zu: %s, Score: %f\n", i, results[i].label, results[i].score);
         }
 
         // Free results for this text

@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "GLiClass/gliclass_api.h"
+#include "GLiClass/gliclass.h"
 
 int main() {
     const char* model_path = "./onnx/model.onnx";
@@ -11,13 +11,23 @@ int main() {
     );
 
     // Initialize session (model setup)
-    GLiClassSession* session = gliclass_init(
+    int num_threads= 8;
+    GLiClassSession* session = NULL;
+    GLiClassStatus status = gliclass_init(
         model_path,
         model_config_path,
         tokenizer_path,
-        8,
-        false
+        num_threads,
+        false,
+        GC_ONNX,
+        GC_CPU,
+        &session
     );
+    if (status != GC_OK) {
+        fprintf(stderr, "Unable to create session: %s", gliclass_last_error_message());
+        gliclass_free_error();
+        gliclass_cleanup(session);
+    }
 
     const char* text = "ONNX is an open-source format designed to enable the interoperability of AI models.";
 
@@ -26,24 +36,21 @@ int main() {
     const size_t num_labels = 4;
 
     // gliclass_infer(session);
-    
     GLiClassResult* results = NULL;
     size_t num_results = 0;
-    
-    bool ok = gliclass_infer(
+    status = gliclass_infer(
         session,
         &config,
-        text, 
-        labels, 
-        num_labels, 
+        text,
+        labels,
+        num_labels,
         &results,
         &num_results,
         NULL
     );
-
-    if (!ok) {
-        fprintf(stderr, "Errors occur during inference!");
-        gliclass_cleanup(session);
+    if (status != GC_OK) {
+        fprintf(stderr, "Error during inference: %s", gliclass_last_error_message());
+        gliclass_free_error();
         return 1;
     }
     

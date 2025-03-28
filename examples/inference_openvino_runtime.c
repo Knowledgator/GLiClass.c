@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "GLiClass/gliclass_api.h"
+#include "GLiClass/gliclass.h"
 #include <time.h>
 
 void list_devices() {
@@ -41,26 +41,28 @@ int main() {
     const char* model_config_path = "./onnx/config.json";
     const char* tokenizer_path = "./tokenizer/tokenizer.json";
 
-    int num_threads = 8;
-
     GLiClassInferenceConfig config;
     gliclass_create_inference_config(
-        8, 10, 2048, 0.5, "multi-label", true, &config
+        8, 0, 2048, 0.0, "multi-label", true, &config
     );
 
     // Initialize session (model setup)
-    GLiClassSessionOpenVino* session = gliclass_init_openvino_runtime(
+    int num_threads= 8;
+    GLiClassSession* session = NULL;
+    GLiClassStatus status = gliclass_init(
         model_path,
         model_config_path,
         tokenizer_path,
         num_threads,
-        "CPU",
-        false
+        false,
+        GC_OPENVINO,
+        GC_CPU,
+        &session
     );
-
-    if (!session) {
-        fprintf(stderr, "Unable to init session!\n");
-        return 1;
+    if (status != GC_OK) {
+        fprintf(stderr, "Unable to create session: %s", gliclass_last_error_message());
+        gliclass_free_error();
+        gliclass_cleanup(session);
     }
 
     const char* text = "ONNX is an open-source format designed to enable the interoperability of AI models.";
@@ -72,12 +74,12 @@ int main() {
     size_t num_results = 0;
     
     double time = (double)clock() / CLOCKS_PER_SEC;
-    bool ok = gliclass_infer_openvino(
+    status = gliclass_infer(
         session,
         &config,
-        text, 
-        labels, 
-        num_labels, 
+        text,
+        labels,
+        num_labels,
         &results,
         &num_results,
         &info
@@ -85,20 +87,20 @@ int main() {
     time = (double)clock() / CLOCKS_PER_SEC - time;
     fprintf(stdout, "Elapsed: %f s\n", time);
 
-    if (!ok) {
-        fprintf(stderr, "Errors occured during inference!");
-        gliclass_cleanup_openvino(session);
+    if (status != GC_OK) {
+        fprintf(stderr, "Error during inference: %s", gliclass_last_error_message());
+        gliclass_free_error();
         return 1;
     }
     
     fprintf(stdout, "\nText: %s\n", text);
     fprintf(stdout, "\nTruncated: %s\n", info.truncated ? "true": "false");
-    fprintf(stdout, "\nProcessed tokens: %ld\n", info.tokens_num);
+    fprintf(stdout, "\nProcessed tokens: %zu\n", info.tokens_num);
     for (size_t i = 0; i < num_results; i++) {
-        fprintf(stdout, "Label_%ld: %s, score: %f\n", i, results[i].label, results[i].score);
+        fprintf(stdout, "Label_%zu: %s, score: %f\n", i, results[i].label, results[i].score);
     }
     gliclass_free_results(results, num_results);
     
-    gliclass_cleanup_openvino(session);
+    gliclass_cleanup(session);
     return 0;
 }

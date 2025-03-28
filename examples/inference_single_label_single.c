@@ -7,17 +7,27 @@ int main() {
     const char* tokenizer_path = "./tokenizer/tokenizer.json";
     GLiClassInferenceConfig config;
     gliclass_create_inference_config(
-        8, 0, 2048, 0.5, "multi-label", true, &config
+        8, 0, 2048, 0.0, "single-label", true, &config
     );
 
     // Initialize session (model setup)
-    GLiClassSession* session = gliclass_init(
+    int num_threads= 8;
+    GLiClassSession* session = NULL;
+    GLiClassStatus status = gliclass_init(
         model_path,
         model_config_path,
         tokenizer_path,
-        8,
-        false
+        num_threads,
+        false,
+        GC_ONNX_OPENVINO,
+        GC_CPU,
+        &session
     );
+    if (status != GC_OK) {
+        fprintf(stderr, "Unable to create session: %s", gliclass_last_error_message());
+        gliclass_free_error();
+        gliclass_cleanup(session);
+    }
 
     const char* text = "ONNX is an open-source format designed to enable the interoperability of AI models.";
 
@@ -30,26 +40,25 @@ int main() {
     GLiClassResult* results = NULL;
     size_t num_results = 0;
     
-    bool ok = gliclass_infer(
+    status = gliclass_infer(
         session,
         &config,
-        text, 
-        labels, 
-        num_labels, 
+        text,
+        labels,
+        num_labels,
         &results,
         &num_results,
         NULL
     );
-
-    if (!ok) {
-        fprintf(stderr, "Errors occur during inference!");
-        gliclass_cleanup(session);
+    if (status != GC_OK) {
+        fprintf(stderr, "Error during inference: %s", gliclass_last_error_message());
+        gliclass_free_error();
         return 1;
     }
     
     fprintf(stdout, "\nText: %s\n", text);
     for (size_t i = 0; i < num_results; i++) {
-        fprintf(stdout, "Label_%ld: %s, score: %f\n", i, results[i].label, results[i].score);
+        fprintf(stdout, "Label_%zu: %s, score: %f\n", i, results[i].label, results[i].score);
     }
     gliclass_free_results(results, num_results);
     return 0;

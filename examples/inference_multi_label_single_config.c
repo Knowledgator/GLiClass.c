@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "GLiClass/gliclass_api.h"
+#include "GLiClass/gliclass.h"
 
 // Function to run a single inference with a given config
 static bool run_inference_with_config(
@@ -15,7 +15,7 @@ static bool run_inference_with_config(
     GLiClassResult* results = NULL;
     size_t num_results = 0;
 
-    bool ok = gliclass_infer(
+    GLiClassStatus status = gliclass_infer(
         session,
         config,
         text,
@@ -25,21 +25,21 @@ static bool run_inference_with_config(
         &num_results,
         NULL
     );
-
-    if (!ok) {
-        fprintf(stderr, "Errors occurred during inference!\n");
-        return ok;
+    if (status != GC_OK) {
+        fprintf(stderr, "Error during inference: %s", gliclass_last_error_message());
+        gliclass_free_error();
+        return false;
     }
 
     // Output results
     printf("\nText: %s\n", text);
     for (size_t i = 0; i < num_results; i++) {
-        printf("Label_%ld: %s, score: %.4f\n", i, results[i].label, results[i].score);
+        printf("Label_%zu: %s, score: %.4f\n", i, results[i].label, results[i].score);
     }
 
     // Cleanup
     gliclass_free_results(results, num_results);
-    return ok;
+    return true;
 }
 
 
@@ -62,27 +62,33 @@ int main() {
         "Finance",
         "Fitness"
     };
-
     const size_t num_labels = 10;
 
     // Initialize session
-    GLiClassSession* session = gliclass_init(
+    int num_threads= 8;
+    GLiClassSession* session = NULL;
+    GLiClassStatus status = gliclass_init(
         model_path,
         model_config_path,
         tokenizer_path,
-        8, // Number of threads
-        false
+        num_threads,
+        false,
+        GC_ONNX,
+        GC_CPU,
+        &session
     );
-    if (!session) {
-        fprintf(stderr, "Failed to initialize GLiClass session\n");
+    if (status != GC_OK) {
+        fprintf(stderr, "Unable to create session: %s", gliclass_last_error_message());
+        gliclass_free_error();
+        gliclass_cleanup(session);
         return 1;
     }
 
     // Array of different InferenceConfig settings to test
     GLiClassInferenceConfig configs[] = {
-        {8, 0, 2048, 0.5, "multi-label", false},
-        {8, 0, 2048, 0.1, "multi-label", false},
-        {8, 0, 2048, 0.01, "multi-label", false}
+        {8, 0, 2048, 0.5f, "multi-label", false},
+        {8, 0, 2048, 0.1f, "multi-label", false},
+        {8, 0, 2048, 0.01f, "multi-label", false}
     };
 
     const size_t num_configs = sizeof(configs) / sizeof(configs[0]);

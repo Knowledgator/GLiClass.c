@@ -7,17 +7,27 @@ int main() {
     const char* tokenizer_path = "./tokenizer/tokenizer.json";
     GLiClassInferenceConfig config;
     gliclass_create_inference_config(
-        8, 0, 2048, 0.5, "multi-label", true, &config
+        8, 0, 2048, 0.5, "single-label", true, &config
     );
 
     // Initialize session (model setup)
-    GLiClassSession* session = gliclass_init(
+    int num_threads= 8;
+    GLiClassSession* session = NULL;
+    GLiClassStatus status = gliclass_init(
         model_path,
         model_config_path,
         tokenizer_path,
-        8,
-        false
+        num_threads,
+        false,
+        GC_ONNX_OPENVINO,
+        GC_CPU,
+        &session
     );
+    if (status != GC_OK) {
+        fprintf(stderr, "Unable to create session: %s", gliclass_last_error_message());
+        gliclass_free_error();
+        gliclass_cleanup(session);
+    }
 
     const char* texts[] = {
         "ONNX is an open-source format designed to enable the interoperability of AI models.",
@@ -39,10 +49,9 @@ int main() {
     GLiClassResult** results = NULL;
     size_t* results_shape = NULL;
     size_t results_shape_size = 0;
-    bool* truncated = NULL;
     
-    bool ok = gliclass_infer_batch(
-        session,
+    status = gliclass_infer_batch(
+        session, 
         &config,
         texts, 
         num_texts, 
@@ -52,18 +61,17 @@ int main() {
         &results,
         &results_shape,
         &results_shape_size,
-        &truncated
+        NULL
     );
-
-    if (!ok) {
-        fprintf(stderr, "Errors occur during inference!");
+    if (status != GC_OK) {
+        fprintf(stderr, "Error during inference: %s", gliclass_last_error_message());
+        gliclass_free_error();
         gliclass_cleanup(session);
         return 1;
     }
     
     for (size_t i = 0; i < results_shape_size; i++) {
         fprintf(stdout, "\nText_%ld/%ld: %s\n", i, results_shape_size, texts[i]);
-        fprintf(stdout, "\nTruncated: %s\n", truncated[i] ? "true": "false");
         for (size_t j = 0; j < results_shape[i]; j++) {
             fprintf(stdout, "Label_%ld: %s, score: %f\n", j, results[i][j].label, results[i][j].score);
         }
