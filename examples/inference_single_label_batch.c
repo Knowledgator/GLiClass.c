@@ -31,7 +31,7 @@ int main() {
     if (status != NULL) {
         fprintf(stderr, "Unable to create session: %s", status->msg);
         gliclass_free_status(status);
-        gliclass_cleanup(session);
+        return 1;
     }
 
     const char* texts[] = {

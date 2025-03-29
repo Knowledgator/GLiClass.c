@@ -68,7 +68,7 @@ int main() {
     if (status != OK) {
         fprintf(stderr, "Unable to create session: %s", status->msg);
         gliclass_free_status(status);
-        gliclass_cleanup(session);
+        return 1;
     }
 
     const char* text = "ONNX is an open-source format designed to enable the interoperability of AI models.";
