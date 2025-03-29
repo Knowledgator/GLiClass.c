@@ -24,7 +24,7 @@ extern "C" {
 #endif
 #include "tokenizers_c.h"
 
-#define GLICLASS_STATUS_MESSAGE_SIZE 512
+#define GLICLASS_STATUS_MESSAGE_SIZE 1024
 
 typedef enum GLiClassStatusCode {
     GC_MEMORY_ERROR,

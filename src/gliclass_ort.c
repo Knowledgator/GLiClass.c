@@ -104,7 +104,6 @@ GLiClassStatus* initialize_ort_session(
     wchar_t* path = NULL;
     gc_status = convert_path(model_path, &path);
     if (gc_status != NULL) {
-        g_ort->ReleaseSessionOptions(options);
         return gc_status;
     }
     
@@ -117,7 +116,6 @@ GLiClassStatus* initialize_ort_session(
         const char* msg = g_ort->GetErrorMessage(status);
         gc_status = set_error(GC_PROVIDER_ERROR, "Error: Failed to create session: %s", msg);
         g_ort->ReleaseStatus(status);
-        g_ort->ReleaseSessionOptions(options);
         return gc_status;
     }
     return NULL;
@@ -267,7 +265,6 @@ GLiClassStatus* gliclass_ort_cuda_init(
     g_ort->ReleaseSessionOptions(options);
     if (gc_status != NULL) {
         g_ort->ReleaseEnv(ort_env);
-        g_ort->ReleaseSession(ort_session);
         return gc_status;
     }
 
