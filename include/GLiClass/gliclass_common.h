@@ -24,6 +24,8 @@ extern "C" {
 #endif
 #include "tokenizers_c.h"
 
+#define GLICLASS_STATUS_MESSAGE_SIZE 512
+
 typedef enum GLiClassStatusCode {
     GC_MEMORY_ERROR,
     GC_LOGICAL_ERROR,
@@ -34,7 +36,7 @@ typedef enum GLiClassStatusCode {
 
 typedef struct GLiClassStatus {
     GLiClassStatusCode code;
-    char msg[256];
+    char msg[GLICLASS_STATUS_MESSAGE_SIZE];
 } GLiClassStatus;
 
 typedef enum GLiClassProvider {
