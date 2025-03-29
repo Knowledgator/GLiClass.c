@@ -267,11 +267,14 @@ GLiClassStatus* gliclass_infer_batch( // TODO: add quick exit on empty batches
     // Allocate memory for tensors
     size_t num_batches = (num_texts + config->batch_size - 1) / config->batch_size;
     bool same_labels = num_labels_size == 1;
-    GLiClassStatus** statuses = (GLiClassStatus**)calloc(num_batches, sizeof(GLiClassStatus*));
+    GLiClassStatus* status = NULL;
 
-    #pragma omp parallel for schedule(dynamic)
+    #pragma omp parallel for schedule(dynamic) shared(status)
     for (size_t i = 0; i < num_batches; i++) {
+        if (status != NULL) continue;
+        
         // Prepare input data
+        GLiClassStatus* status_in = NULL;
         const size_t current_batch_size = get_batch_size(
             i, num_batches, num_texts, config->batch_size
         );
@@ -281,8 +284,8 @@ GLiClassStatus* gliclass_infer_batch( // TODO: add quick exit on empty batches
         const size_t batch_num_labels_size = same_labels ? num_labels_size: current_batch_size;
 
         // Prepare tokens
-        const char** prepared_inputs = NULL;
-        statuses[i] = prepare_inputs(
+        char** prepared_inputs = NULL;
+        status_in = prepare_inputs(
             session->model_config,
             config,
             batch_texts,
@@ -292,41 +295,45 @@ GLiClassStatus* gliclass_infer_batch( // TODO: add quick exit on empty batches
             same_labels,
             &prepared_inputs
         );
-        if (statuses[i] != NULL) break;
+        if (status_in  != NULL) {
+            status = status_in;
+            continue;
+        };
 
         TokenizedInputs tokenized;
-        statuses[i] = tokenize_inputs(
+        status_in = tokenize_inputs(
             session->tokenizer, 
-            prepared_inputs, 
+            (const char**)prepared_inputs, 
             current_batch_size,
             config->min_length,
             config->max_length,
             &tokenized,
             info
         );
-        if (statuses[i] != NULL) {
-            free_prepared_inputs((char**)prepared_inputs, current_batch_size);
-            break;
+        if (status_in  != NULL) {
+            status = status_in;
+            free_prepared_inputs(prepared_inputs, current_batch_size);
+            continue;
         };
 
-        statuses[i] = session->provider->run_inference_batch(
+        status_in = session->provider->run_inference_batch(
             session, config, &tokenized, i, batch_labels, batch_num_labels, batch_num_labels_size, 
             out_results, out_num_results
         );
 
         // Clean up memory
-        free_prepared_inputs((char**)prepared_inputs, current_batch_size);
+        free_prepared_inputs(prepared_inputs, current_batch_size);
         free_tokenized_inputs(&tokenized);
-        if (statuses[i] != NULL) break;
-    }
-
-    for (size_t i = 0; i < num_batches; i++) {
-        if (statuses[i] != NULL) {
-            gliclass_free_results_batch(*out_results, *out_num_results, *out_num_results_size);
-            return statuses[i];
+        if (status_in  != NULL) {
+            status = status_in;
         }
     }
-    return NULL;
+
+    if (status != NULL) {
+        gliclass_free_results_batch(*out_results, *out_num_results, *out_num_results_size);
+        *out_num_results_size = 0;
+    }
+    return status;
 }
 
 

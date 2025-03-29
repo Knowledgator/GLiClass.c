@@ -8,6 +8,7 @@
 
 // Mutex declarations
 #ifndef _WIN32
+#include <pthread.h>
 static pthread_mutex_t queue_mutex;
 #else
 static HANDLE queue_mutex;

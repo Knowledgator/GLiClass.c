@@ -5,6 +5,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdbool.h>
+#include <string.h>
 #include "error.h"
 
 GLiClassStatus* prepare_inputs(
@@ -51,7 +52,11 @@ void append_label(
     // add label in lower case
     for (const char* p = label; *p; ++p) {
         char lower_char = (char)tolower((unsigned char)*p);
+        #ifdef _WIN32
         strncat_s(result, result_size, &lower_char, 1);
+        #else
+        strncat(result, &lower_char, 1);
+        #endif
     }
 }
 
@@ -64,7 +69,11 @@ void append_labels(
     char* result
 ) {
     for (size_t i = 0; i < num_labels; ++i) {
+        #ifdef _WIN32
         strcat_s(result, result_size, label_prefix);
+        #else
+        strcat(result, label_prefix);
+        #endif
         append_label(labels[i], result_size, result);
     }
 }
@@ -98,16 +107,44 @@ GLiClassStatus* prepare_input(
         append_labels(
             label_prefix, labels, num_labels, total_len, *input
         );
+        #ifdef _WIN32
         strcat_s(*input, total_len, sep_tag);
-        if (add_prefix_space) strcat_s(*input, total_len, " ");
+        #else
+        strcat(*input, sep_tag);
+        #endif
+        if (add_prefix_space) {
+            #ifdef _WIN32
+            strcat_s(*input, total_len, " ");
+            #else
+            strcat(*input, " ");
+            #endif
+        }
+        #ifdef _WIN32
         strcat_s(*input, total_len, text);
+        #else
+        strcat(*input, text);
+        #endif
     } else {
-        if (add_prefix_space) strcat_s(*input, total_len, " ");
+        if (add_prefix_space) {
+            #ifdef _WIN32
+            strcat_s(*input, total_len, " ");
+            #else
+            strcat(*input, " ");
+            #endif
+        }
+        #ifdef _WIN32
         strcat_s(*input, total_len, text);
+        #else
+        strcat(*input, text);
+        #endif
         append_labels(
             label_prefix, labels, num_labels, total_len, *input
         );
+        #ifdef _WIN32
         strcat_s(*input, total_len, sep_tag);
+        #else
+        strcat(*input, sep_tag);
+        #endif
     }
 
     return NULL;

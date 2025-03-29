@@ -99,9 +99,10 @@ GLiClassStatus* initialize_ort_session(
     OrtStatus* status = NULL;
 
     // Load the model and create a session
+    GLiClassStatus* gc_status;
     #ifdef _WIN32
     wchar_t* path = NULL;
-    GLiClassStatus* gc_status = convert_path(model_path, &path);
+    gc_status = convert_path(model_path, &path);
     if (gc_status != NULL) {
         g_ort->ReleaseSessionOptions(options);
         return gc_status;

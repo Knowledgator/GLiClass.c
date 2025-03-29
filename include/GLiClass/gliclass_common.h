@@ -94,7 +94,7 @@ typedef struct TokenizedInput {
 typedef struct GLiClassProviderAPI GLiClassProviderAPI;
 
 typedef struct GLiClassSession {
-    const GLiClassModelConfig* model_config;
+    GLiClassModelConfig* model_config;
     TokenizerHandle tokenizer;
     GLiClassProviderAPI* provider;
     bool use_mutex;
