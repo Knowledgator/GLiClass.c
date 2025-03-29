@@ -46,8 +46,29 @@ endif()
 
 if (ONNX_OPENVINO)
     add_executable(inference_ort_openvino inference_ort_openvino.c)
-    target_include_directories(inference_ort_openvino PRIVATE ${GLICLASS_ROOTDIR}/include)
-    target_link_libraries(inference_ort_openvino GLiClass)
+    
+    if (${OPENVINO_PATH} STREQUAL "")
+        find_library(OPENVINO_LIB
+        NAMES openvino_c libopenvino_c
+        )
+    else()    
+        find_library(OPENVINO_LIB
+        NAMES openvino_c libopenvino_c
+        PATHS ${OPENVINO_LIB_PATH}
+        NO_DEFAULT_PATH
+        )
+    endif()
+    
+    if(NOT OPENVINO_LIB)
+        message(FATAL_ERROR "OpenVino lib is not found at ${OPENVINO_LIB_PATH}")
+    endif()
+
+    target_include_directories(inference_ort_openvino PRIVATE 
+        ${GLICLASS_ROOTDIR}/include
+        ${OPENVINO_PATH}/include)
+    target_link_libraries(inference_ort_openvino 
+        GLiClass 
+        ${OPENVINO_LIB})
 endif()
 
 if(OPENVINO)
