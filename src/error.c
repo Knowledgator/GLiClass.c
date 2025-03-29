@@ -8,7 +8,7 @@ GLiClassStatus* set_error(GLiClassStatusCode code, const char* format, ...) {
     va_list args;
     va_start(args, format);
 
-    GLiClassStatus* status = (GLiClassStatus*)calloc(1, sizeof(GLiClassStatus*));
+    GLiClassStatus* status = (GLiClassStatus*)calloc(1, sizeof(GLiClassStatus));
     if (!status) {
         fprintf(stderr, "Unable to allocate status");
         exit(1);
