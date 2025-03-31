@@ -104,14 +104,14 @@ GLiClassStatus* gliclass_init(
     GLiClassProviderAPI* provider_api = NULL;
     GLiClassStatus* status;
     if (provider == GC_ONNX) {
-        #ifdef USE_ONNX
+        #ifdef GC_USE_ONNX
         gliclass_ort_initialize_api();
         if (!g_ort) {
             return set_error(GC_PROVIDER_ERROR, "Unable to init ORT API");
         }
 
         if (device >= GC_GPU && device <= GC_GPU_8) {
-            #ifdef USE_CUDA
+            #ifdef GC_USE_CUDA
             // TODO: select device with id
             status = gliclass_ort_cuda_init(
                 model_path, num_threads, get_cuda_device_id(device), &provider_api
@@ -130,7 +130,7 @@ GLiClassStatus* gliclass_init(
         return set_error(GC_PROVIDER_ERROR, "ONNX provider is not supported for current build");
         #endif
     } else if (provider == GC_ONNX_OPENVINO) {
-        #ifdef USE_ONNX
+        #ifdef GC_USE_ONNX
         gliclass_ort_initialize_api();
         if (!g_ort) {
             return set_error(GC_PROVIDER_ERROR, "Unable to init ORT API");
@@ -145,7 +145,7 @@ GLiClassStatus* gliclass_init(
         return set_error(GC_PROVIDER_ERROR, "ONNX OpenVino provider is not supported for current build");
         #endif
     } else if (provider == GC_OPENVINO) {
-        #ifdef USE_OPENVINO
+        #ifdef GC_USE_OPENVINO
         char* device_type = NULL;
         openvino_device(device, &device_type);
         status = gliclass_openvino_init(model_path, num_threads, device_type, &provider_api);

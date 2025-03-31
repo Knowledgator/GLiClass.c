@@ -215,7 +215,7 @@ GLiClassStatus* gliclass_ort_cpu_init(
 }
 
 
-#ifdef USE_CUDA
+#ifdef GC_USE_CUDA
 GLiClassStatus* gliclass_ort_cuda_init(
     const char* model_path, int num_threads, int device_id, GLiClassProviderAPI** provider
 ) {

@@ -7,11 +7,11 @@ extern "C" {
 
 #include "GLiClass/gliclass_common.h"
 
-#ifdef USE_ONNX
+#ifdef GC_USE_ONNX
 #include "GLiClass/gliclass_ort.h"
 #endif
 
-#ifdef USE_OPENVINO
+#ifdef GC_USE_OPENVINO
 #include "GLiClass/gliclass_ov.h"
 #endif
 

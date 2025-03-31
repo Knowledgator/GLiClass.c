@@ -34,7 +34,7 @@ GLICLASS_API GLiClassStatus* gliclass_ort_cpu_init(
 GLICLASS_API GLiClassStatus* gliclass_ort_openvino_init(
     const char* model_path, const int num_threads, const char* device_type, GLiClassProviderAPI** provider
 );
-#ifdef USE_CUDA
+#ifdef GC_USE_CUDA
 GLICLASS_API GLiClassStatus* gliclass_ort_cuda_init(
     const char* model_path, const int num_threads, const int device_id, GLiClassProviderAPI** provider
 );
