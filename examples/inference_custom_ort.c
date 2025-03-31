@@ -104,7 +104,7 @@ int main() {
         return 1;
     }
 
-    #ifdef USE_CUDA // GPU
+    #ifdef GC_USE_CUDA // GPU
     int device_id = 0;
     ort_status = OrtSessionOptionsAppendExecutionProvider_CUDA(ort_session_options, device_id);
     if (ort_status != NULL) {
