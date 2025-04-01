@@ -5,6 +5,8 @@
 #include <string.h>
 #include <math.h>
 
+#include <openvino/c/openvino.h>
+
 #include "../utils.h"
 #include "../error.h"
 #include "model.h"

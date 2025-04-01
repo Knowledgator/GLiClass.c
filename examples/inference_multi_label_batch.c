@@ -75,7 +75,7 @@ int main() {
     }
     
     for (size_t i = 0; i < results_shape_size; i++) {
-        fprintf(stdout, "\nText_%zu/%zu: %s\n", i, results_shape_size, texts[i]);
+        fprintf(stdout, "\nText_%zu/%zu: %s\n", i+1, results_shape_size, texts[i]);
         for (size_t j = 0; j < results_shape[i]; j++) {
             fprintf(stdout, "Label_%zu: %s, score: %f\n", j, results[i][j].label, results[i][j].score);
         }      

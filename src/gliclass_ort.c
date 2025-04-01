@@ -9,6 +9,7 @@
 #include "utils.h"
 #include "onnx_runtime/model.h"
 #include "onnx_runtime/postprocessor.h"
+#include "onnxruntime_c_api.h"
 
 #ifndef _WIN32
     #include <unistd.h>

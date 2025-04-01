@@ -5,6 +5,8 @@
 #include <string.h>
 #include <math.h>
 
+#include "onnxruntime_c_api.h"
+
 #include "../utils.h"
 #include "../error.h"
 #include "model.h"

@@ -1,6 +1,7 @@
 #include "model.h"
 
 #include <stdio.h>
+#include <openvino/c/openvino.h>
 #include "../utils.h"
 #include "../error.h"
 

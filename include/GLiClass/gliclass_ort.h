@@ -6,7 +6,11 @@ extern "C" {
 #endif
 
 #include "GLiClass/gliclass_common.h"
-#include "onnxruntime_c_api.h"
+
+typedef struct OrtApi OrtApi;
+typedef struct OrtEnv OrtEnv;
+typedef struct OrtSession OrtSession;
+typedef struct OrtValue OrtValue;
 
 GLICLASS_API extern const OrtApi* g_ort;
 

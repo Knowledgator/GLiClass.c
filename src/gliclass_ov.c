@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <openvino/c/openvino.h>
 #include "tokenizer.h"
 #include "preprocessor.h"
 #include "utils.h"

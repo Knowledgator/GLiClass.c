@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "GLiClass/gliclass.h"
 #include <time.h>
+#include <openvino/c/openvino.h>
 
 void list_devices() {
     ov_core_t* core = NULL;
@@ -52,7 +53,7 @@ int main() {
     }
 
     // Initialize session (model setup)
-    int num_threads= 8;
+    int num_threads = 0;
     GLiClassSession* session = NULL;
     status = gliclass_init(
         model_path,

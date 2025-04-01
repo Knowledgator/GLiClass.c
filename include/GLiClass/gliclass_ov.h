@@ -6,7 +6,10 @@ extern "C" {
 #endif
 
 #include "GLiClass/gliclass_common.h"
-#include <openvino/c/openvino.h>
+
+typedef struct ov_core ov_core_t;
+typedef struct ov_compiled_model ov_compiled_model_t;
+typedef struct ov_tensor ov_tensor_t;
 
 typedef struct GLiClassOpenVinoSession {
     ov_core_t* core;

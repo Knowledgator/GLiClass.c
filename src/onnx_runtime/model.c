@@ -2,6 +2,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+
+#include "onnxruntime_c_api.h"
+
 #include "../utils.h"
 #include "../error.h"
 

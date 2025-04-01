@@ -6,16 +6,9 @@ extern "C" {
 #endif
 
 #include "GLiClass/gliclass_common.h"
-
-#ifdef GC_USE_ONNX
-#include "GLiClass/gliclass_ort.h"
-#endif
-
-#ifdef GC_USE_OPENVINO
-#include "GLiClass/gliclass_ov.h"
-#endif
-
 #include "GLiClass/gliclass_api.h"
+#include "GLiClass/gliclass_ort.h"
+#include "GLiClass/gliclass_ov.h"
 
 #ifdef __cplusplus
 }
