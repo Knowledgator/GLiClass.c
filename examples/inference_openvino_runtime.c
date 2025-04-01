@@ -95,6 +95,7 @@ int main() {
     if (status != NULL) {
         fprintf(stderr, "Error during inference: %s", status->msg);
         gliclass_free_status(status);
+        gliclass_cleanup(session);
         return 1;
     }
     
