@@ -142,19 +142,24 @@ if(OPENVINO)
 endif()
 
 # Tokenizers CPP
-FetchContent_Declare(
-    tokenizers_cpp
-    GIT_REPOSITORY https://github.com/mlc-ai/tokenizers-cpp.git
-    GIT_TAG 832b8728983be015f7db7428741ede87f925eddb # latest version 24.02.25
-)
+if(NOT TARGET tokenizers_cpp)
+  FetchContent_Declare(
+      tokenizers_cpp
+      GIT_REPOSITORY https://github.com/mlc-ai/tokenizers-cpp.git
+      GIT_TAG 832b8728983be015f7db7428741ede87f925eddb # latest version 24.02.25
+  )
+  FetchContent_MakeAvailable(tokenizers_cpp)
+endif()
 
 # cJSON
-FetchContent_Declare(
-  cjson
-  GIT_REPOSITORY https://github.com/DaveGamble/cJSON.git
-  GIT_TAG acc76239bee01d8e9c858ae2cab296704e52d916 # latest version 1.7.18
-)
-FetchContent_MakeAvailable(tokenizers_cpp cjson)
+if(NOT TARGET cjson)
+  FetchContent_Declare(
+    cjson
+    GIT_REPOSITORY https://github.com/DaveGamble/cJSON.git
+    GIT_TAG acc76239bee01d8e9c858ae2cab296704e52d916 # latest version 1.7.18
+  )
+  FetchContent_MakeAvailable(cjson)
+endif()
 
 # Find OpenMP package
 find_package(OpenMP REQUIRED)
