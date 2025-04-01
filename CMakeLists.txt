@@ -12,9 +12,7 @@ else()
   add_compile_options(-fcommon)
 endif()
 
-
-# Include the headers
-include_directories(include)
+include(FetchContent)
 
 # Add option to choose between CPU and GPU
 option(ONNX "Build ONNX runtime inference with default CPU provider" ON)
@@ -68,7 +66,6 @@ if(ONNX)
     message(FATAL_ERROR "ONNXRuntime library not found. Please check the library paths or download them from official site:\n
             https://github.com/microsoft/onnxruntime/releases.")
   endif()
-  message(STATUS "Using ONNXRuntime.")
 endif()
 
 if(ONNX_CUDA)
@@ -112,8 +109,6 @@ if(ONNX_CUDA)
       message(FATAL_ERROR "cuDNN not found. Ensure that cuDNN is installed and available in the system paths. Aborting GPU build.")
     endif()
   endif()
-
-  message(STATUS "Using ONNXRuntime CUDA provider")
 endif()
 
 
@@ -133,24 +128,25 @@ if(OPENVINO)
   if(NOT OPENVINO_LIB)
     message(FATAL_ERROR "OpenVino lib is not found at ${OPENVINO_LIB_PATH}")
   endif()
-
-  message(STATUS "Using OpenVino runtime")
 endif()
 
-# Path for tokenizers-cpp
-set(TOKENIZER_CPP_PATH "./tokenizers-cpp")
+# Tokenizers CPP
+FetchContent_Declare(
+    tokenizers_cpp
+    GIT_REPOSITORY https://github.com/mlc-ai/tokenizers-cpp.git
+    GIT_TAG 832b8728983be015f7db7428741ede87f925eddb # latest version 24.02.25
+)
 
-# Path for cJSON
-set(CJSON_PATH "./cJSON")
+# cJSON
+FetchContent_Declare(
+  cjson
+  GIT_REPOSITORY https://github.com/DaveGamble/cJSON.git
+  GIT_TAG acc76239bee01d8e9c858ae2cab296704e52d916 # latest version 1.7.18
+)
+FetchContent_MakeAvailable(tokenizers_cpp cjson)
 
 # Find OpenMP package
 find_package(OpenMP REQUIRED)
-
-# Add tokenizers-cpp as a subdirectory
-add_subdirectory(${TOKENIZER_CPP_PATH} tokenizers)
-
-# Add cJSON as a subdirectory
-add_subdirectory(${CJSON_PATH} cJSON)
 
 # Add shared library
 if(ONNX AND OPENVINO)
@@ -215,9 +211,7 @@ set_target_properties(GLiClass PROPERTIES
 # Include directories with tokenizers-cpp header files
 target_include_directories(GLiClass PUBLIC
               ${CMAKE_CURRENT_SOURCE_DIR}/include
-              ${CMAKE_CURRENT_SOURCE_DIR}
-              ${TOKENIZER_CPP_PATH}/include
-              ${CJSON_PATH})
+              ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Link tokenizers-cpp libraries
 target_link_libraries(GLiClass
