@@ -55,19 +55,19 @@ GLiClassStatus* gliclass_openvino_init(
         return set_error(GC_PROVIDER_ERROR, "Unable to init OpenVino core: %s: %s", e, ov_get_last_err_msg());
     }
 
-    char threads[3];
-    snprintf(threads, 3, "%d", num_threads);
     session->model = NULL;
     if (num_threads > 0 && strcmp(device_type, "CPU") == 0) {
+        char threads[3];
+        snprintf(threads, 3, "%d", num_threads);
         status = ov_core_compile_model_from_file(
             session->core, model_path, device_type, 4, &(session->model),
-            ov_property_key_hint_performance_mode, "LATENCY",
-            ov_property_key_inference_num_threads, threads
+            ov_property_key_hint_performance_mode ? ov_property_key_hint_performance_mode : "PERFORMANCE_HINT", "LATENCY",
+            ov_property_key_inference_num_threads ? ov_property_key_inference_num_threads: "INFERENCE_NUM_THREADS", threads
         );
     } else {
         status = ov_core_compile_model_from_file(
             session->core, model_path, device_type, 2, &(session->model),
-            ov_property_key_hint_performance_mode, "LATENCY"
+            ov_property_key_hint_performance_mode ? ov_property_key_hint_performance_mode : "PERFORMANCE_HINT", "LATENCY"
         );
     }
 
