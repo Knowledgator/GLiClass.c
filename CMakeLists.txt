@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.18)
+cmake_minimum_required(VERSION 3.19)
 project(GLiClass C CXX)
 
 set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}")
@@ -25,6 +25,10 @@ if(ONNX_CUDA OR ONNX_OPENVINO)
   SET(ONNX ON)
 endif()
 
+if(ONNX_OPENVINO)
+  SET(OPENVINO ON)
+endif()
+
 set(BUILD_TARGET "")
 if(ONNX)
   string(APPEND BUILD_TARGET "ONNX; ")
@@ -44,23 +48,23 @@ message(STATUS "Build target set to: ${BUILD_TARGET}")
 ############################################ ONNX ###########################################
 
 # Path to ONNXRuntime 
-set(ONNXRUNTIME_PATH "./onnxruntime-linux-x64-1.19.2" CACHE STRING "Onnxruntime path")
-
-if(WIN32)
-  set(OPENVINO_PATH "C:/Program Files (x86)/Intel/openvino_2024.4.0/runtime" CACHE STRING "OpenVino runtime path")
-  set(OPENVINO_LIB_PATH ${OPENVINO_PATH}/lib/intel64/Release CACHE STRING "OpenVino runtime lib path")
-else()  
-  set(OPENVINO_PATH "" CACHE STRING "OpenVino runtime path")
-  set(OPENVINO_LIB_PATH ${OPENVINO_PATH}/lib/ CACHE STRING "OpenVino runtime lib path")
-endif()
+set(ONNXRUNTIME_PATH "" CACHE STRING "Onnxruntime path")
+set(OPENVINO_PATH "" CACHE STRING "OpenVino runtime path")
+set(OPENVINO_LIB_PATH "" CACHE STRING "OpenVino runtime lib path")
 
 # If using ONNX runtime
 if(ONNX)
-  find_library(ONNXRUNTIME_LIB
-    NAMES onnxruntime libonnxruntime
-    PATHS "${ONNXRUNTIME_PATH}/lib"
-    NO_DEFAULT_PATH
-  )
+  if ("${ONNXRUNTIME_PATH}" STREQUAL "")
+    find_library(ONNXRUNTIME_LIB
+      NAMES onnxruntime libonnxruntime
+    )
+  else()
+    find_library(ONNXRUNTIME_LIB
+      NAMES onnxruntime libonnxruntime
+      PATHS "${ONNXRUNTIME_PATH}/lib"
+      NO_DEFAULT_PATH
+    )
+  endif()
 
   if(NOT ONNXRUNTIME_LIB)
     message(FATAL_ERROR "ONNXRuntime library not found. Please check the library paths or download them from official site:\n
@@ -113,11 +117,18 @@ endif()
 
 
 if(OPENVINO)
-  if (${OPENVINO_PATH} STREQUAL "")
+  if ("${OPENVINO_PATH}" STREQUAL "")
     find_library(OPENVINO_LIB
       NAMES openvino_c libopenvino_c
     )
-  else()    
+  else()
+    if ("${OPENVINO_LIB_PATH}" STREQUAL "")
+      if(WIN32)
+        set(OPENVINO_LIB_PATH ${OPENVINO_PATH}/lib/intel64/Release)
+      else()  
+        set(OPENVINO_LIB_PATH ${OPENVINO_PATH}/lib/)
+      endif()
+    endif()
     find_library(OPENVINO_LIB
       NAMES openvino_c libopenvino_c
       PATHS ${OPENVINO_LIB_PATH}
@@ -195,13 +206,14 @@ endif()
 # Definitions for DLL export
 target_compile_definitions(GLiClass PRIVATE GLICLASS_EXPORTS)
 if(ONNX)
-  target_compile_definitions(GLiClass PUBLIC GC_USE_ONNX)
+  target_compile_definitions(GLiClass PRIVATE GC_USE_ONNX)
 endif()
 if(ONNX_CUDA)
-  target_compile_definitions(GLiClass PUBLIC GC_USE_CUDA)
+  target_compile_definitions(GLiClass PRIVATE GC_USE_CUDA)
 endif()
 if(OPENVINO)
-  target_compile_definitions(GLiClass PUBLIC GC_USE_OPENVINO)
+  target_compile_definitions(GLiClass PRIVATE GC_USE_OPENVINO)
+  target_compile_definitions(GLiClass PRIVATE OPENVINO_STATIC_LIBRARY)
 endif()
 
 # Public headers (for installation)
@@ -220,11 +232,15 @@ target_link_libraries(GLiClass
               OpenMP::OpenMP_C)
 
 if(ONNX)
-  target_include_directories(GLiClass PUBLIC ${ONNXRUNTIME_PATH}/include)
+  if (NOT "${ONNXRUNTIME_PATH}" STREQUAL "")
+    target_include_directories(GLiClass PUBLIC ${ONNXRUNTIME_PATH}/include)
+  endif()
   target_link_libraries(GLiClass ${ONNXRUNTIME_LIB})
 endif()
 if(OPENVINO)
-  target_include_directories(GLiClass PUBLIC ${OPENVINO_PATH}/include)
+  if (NOT "${OPENVINO_PATH}" STREQUAL "")
+    target_include_directories(GLiClass PUBLIC ${OPENVINO_PATH}/include)
+  endif()
   target_link_libraries(GLiClass ${OPENVINO_LIB})
 endif()
 
