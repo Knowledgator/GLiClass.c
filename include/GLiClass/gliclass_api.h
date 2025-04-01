@@ -28,7 +28,6 @@ GLICLASS_API GLiClassStatus* gliclass_init(
 GLICLASS_API GLiClassStatus* gliclass_init_custom_provider(
     const char* model_config_path,
     const char* tokenizer_path,
-    const int num_threads,
     const bool use_mutex,
     GLiClassProviderAPI* provider,
     GLiClassSession** session_out

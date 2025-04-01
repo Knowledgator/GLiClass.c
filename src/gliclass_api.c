@@ -1,5 +1,7 @@
 #include "GLiClass/gliclass_api.h"
 
+#include <stdlib.h>
+
 #include "read_data.h"
 #include "error.h"
 #include "utils.h"
@@ -21,15 +23,10 @@ GLiClassStatus* initialize_model_config(const char* model_config_path, GLiClassM
 GLiClassStatus* gliclass_init_custom_provider(
     const char* model_config_path,
     const char* tokenizer_path,
-    const int num_threads,
     const bool use_mutex,
     GLiClassProviderAPI* provider,
     GLiClassSession** session_out
 ) {
-    if (num_threads == 0) {
-        return set_error(GC_LOGICAL_ERROR, "num_threads shouldn't equal zero");
-    }
-
     GLiClassSession* session = calloc(1, sizeof(GLiClassSession));
     if (!session) {
         return set_error(GC_MEMORY_ERROR, "Unable to allocate session");
@@ -158,8 +155,7 @@ GLiClassStatus* gliclass_init(
         return set_error(GC_PROVIDER_ERROR, "Provider is not supported for current build");
     }
     return gliclass_init_custom_provider(
-        model_config_path, tokenizer_path, 
-        num_threads, use_mutex, provider_api, session_out
+        model_config_path, tokenizer_path, use_mutex, provider_api, session_out
     );
 }
 

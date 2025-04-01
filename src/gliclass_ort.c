@@ -135,23 +135,15 @@ GLiClassStatus* initialize_base_options(
     }
 
     // Set the number of threads for intra-op operations
-    status = g_ort->SetIntraOpNumThreads(*session_options, num_threads);
-    if (status != NULL) {
-        const char* msg = g_ort->GetErrorMessage(status);
-        gc_status = set_error(GC_PROVIDER_ERROR, "Error: Failed to set intra-op threads: %s", msg);
-        g_ort->ReleaseStatus(status);
-        g_ort->ReleaseSessionOptions(*session_options);
-        return gc_status;
-    }
-
-    // Set the number of threads for inter-op operations
-    status = g_ort->SetInterOpNumThreads(*session_options, num_threads);
-    if (status != NULL) {
-        const char* msg = g_ort->GetErrorMessage(status);
-        set_error(GC_PROVIDER_ERROR, "Error: Failed to set inter-op threads: %s", msg);
-        g_ort->ReleaseStatus(status);
-        g_ort->ReleaseSessionOptions(*session_options);
-        return gc_status;
+    if (num_threads > 0) {
+        status = g_ort->SetIntraOpNumThreads(*session_options, num_threads);
+        if (status != NULL) {
+            const char* msg = g_ort->GetErrorMessage(status);
+            gc_status = set_error(GC_PROVIDER_ERROR, "Error: Failed to set intra-op threads: %s", msg);
+            g_ort->ReleaseStatus(status);
+            g_ort->ReleaseSessionOptions(*session_options);
+            return gc_status;
+        }
     }
     return NULL;
 }

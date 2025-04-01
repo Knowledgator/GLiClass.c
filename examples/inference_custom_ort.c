@@ -156,7 +156,6 @@ int main() {
     gc_status = gliclass_init_custom_provider(
         model_config_path,
         tokenizer_path,
-        num_threads,
         false, // use_mutex
         provider,
         &session

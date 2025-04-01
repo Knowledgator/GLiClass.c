@@ -32,7 +32,7 @@ GLiClassStatus* gliclass_openvino_infer(
 );
 
 
-void gliclass_openvino_cleanup(GLiClassOpenVinoSession* session);
+void gliclass_openvino_cleanup(void* session);
 
 
 GLiClassStatus* gliclass_openvino_init(
@@ -65,7 +65,7 @@ GLiClassStatus* gliclass_openvino_init(
         );
     } else {
         status = ov_core_compile_model_from_file(
-            session->core, model_path, device_type, 2, &session->model,
+            session->core, model_path, device_type, 2, &(session->model),
             ov_property_key_hint_performance_mode, "LATENCY"
         );
     }
@@ -137,9 +137,10 @@ GLiClassStatus* gliclass_openvino_infer(
 }
 
 
-void gliclass_openvino_cleanup(GLiClassOpenVinoSession* session) {
-    if (!session) return;
-    if (session->model) ov_compiled_model_free(session->model);
-    if (session->core) ov_core_free(session->core);
-    free(session);
+void gliclass_openvino_cleanup(void* session) {
+    GLiClassOpenVinoSession* ov_session = (GLiClassOpenVinoSession*)session;
+    if (!ov_session) return;
+    if (ov_session->model) ov_compiled_model_free(ov_session->model);
+    if (ov_session->core) ov_core_free(ov_session->core);
+    free(ov_session);
 }
