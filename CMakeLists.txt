@@ -228,7 +228,8 @@ set_target_properties(GLiClass PROPERTIES
 # Include directories with tokenizers-cpp header files
 target_include_directories(GLiClass PUBLIC
               ${CMAKE_CURRENT_SOURCE_DIR}/include
-              ${CMAKE_CURRENT_SOURCE_DIR})
+              ${CMAKE_CURRENT_SOURCE_DIR}
+              ${cjson_SOURCE_DIR})
 
 # Link tokenizers-cpp libraries
 target_link_libraries(GLiClass

@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-#include "cjson/cJSON.h"
+#include "cJSON.h"
 
 #include "error.h"
 
