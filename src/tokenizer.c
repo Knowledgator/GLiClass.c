@@ -120,7 +120,10 @@ GLiClassStatus* tokenize_input(
     bool truncated;
     if (result.len < min_length) {
         tokenized->seq_length = 0;
-        truncated = true;
+        if (info) {
+            info->truncated = true;
+            info->tokens_num = tokenized->seq_length;
+        }
         tokenizers_free_encode_results(&result, 1);
         return NULL;
     } else if (result.len > max_length) {
@@ -178,6 +181,8 @@ void print_tokenized_inputs(const TokenizedInputs* tokenized) {
 }
 
 void free_tokenized_inputs(TokenizedInputs* tokenized) {
+    if (tokenized->seq_length == 0)
+        return;
     for (size_t i = 0; i < tokenized->batch_size; ++i) {
         free(tokenized->input_ids[i]);
         free(tokenized->token_type_ids[i]);
@@ -189,6 +194,8 @@ void free_tokenized_inputs(TokenizedInputs* tokenized) {
 }
 
 void free_tokenized_input(TokenizedInput* tokenized) {
+    if (tokenized->seq_length == 0)
+        return;
     free(tokenized->input_ids);
     free(tokenized->token_type_ids);
     free(tokenized->attention_mask);
