@@ -44,7 +44,7 @@ int main() {
 
     GLiClassInferenceConfig config;
     GLiClassStatus* status = gliclass_create_inference_config(
-        8, 0, 2048, 0.0, "multi-label", true, &config
+        8, 0.0, "multi-label", &config
     );
     if (status != NULL) {
         fprintf(stderr, "Invalid config: %s", status->msg);
@@ -101,7 +101,6 @@ int main() {
     }
     
     fprintf(stdout, "\nText: %s\n", text);
-    fprintf(stdout, "\nTruncated: %s\n", info.truncated ? "true": "false");
     fprintf(stdout, "\nProcessed tokens: %zu\n", info.tokens_num);
     for (size_t i = 0; i < num_results; i++) {
         fprintf(stdout, "Label_%zu: %s, score: %f\n", i, results[i].label, results[i].score);

@@ -11,7 +11,6 @@
  * @param tokenizer The tokenizer handle to use for tokenization.
  * @param inputs An array of input texts to be tokenized.
  * @param num_texts The number of input texts in the batch.
- * @param max_length The maximum length of tokens for each text. Sequences longer than this will be truncated.
  * @return A TokenizedInputs structure containing token IDs, token type IDs, and attention masks for the input texts.
  *         The caller is responsible for freeing the memory allocated for the returned structure.
  */
@@ -19,8 +18,6 @@ GLiClassStatus* tokenize_inputs(
     TokenizerHandle tokenizer, 
     const char** inputs, 
     const size_t num_texts,
-    const size_t min_length,
-    const size_t max_length,
     TokenizedInputs* tokenized,
     GLiClassTokensInfo** info
 );
@@ -31,15 +28,12 @@ GLiClassStatus* tokenize_inputs(
  * @param tokenizer The tokenizer handle to use for tokenization.
  * @param inputs An array of input texts to be tokenized.
  * @param num_texts The number of input texts in the batch.
- * @param max_length The maximum length of tokens for each text. Sequences longer than this will be truncated.
  * @return A TokenizedInputs structure containing token IDs, token type IDs, and attention masks for the input texts.
  *         The caller is responsible for freeing the memory allocated for the returned structure.
  */
 GLiClassStatus* tokenize_input(
     TokenizerHandle tokenizer, 
     const char* input,
-    const size_t min_length,
-    const size_t max_length,
     TokenizedInput* tokenized,
     GLiClassTokensInfo* info
 );

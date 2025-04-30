@@ -85,9 +85,9 @@ int main() {
 
     // Array of different InferenceConfig settings to test
     GLiClassInferenceConfig configs[] = {
-        {8, 0, 2048, 0.5f, "multi-label", false},
-        {8, 0, 2048, 0.1f, "multi-label", false},
-        {8, 0, 2048, 0.01f, "multi-label", false}
+        {8, 0.5f, "multi-label"},
+        {8, 0.1f, "multi-label"},
+        {8, 0.01f, "multi-label"}
     };
 
     const size_t num_configs = sizeof(configs) / sizeof(configs[0]);

@@ -20,8 +20,6 @@ GLiClassStatus* tokenize_inputs(
     TokenizerHandle tokenizer, 
     const char** inputs, 
     const size_t num_texts,
-    const size_t min_length,
-    const size_t max_length,
     TokenizedInputs* tokenized,
     GLiClassTokensInfo** info
 ) {
@@ -41,7 +39,6 @@ GLiClassStatus* tokenize_inputs(
     int add_special_tokens = 1;
     tokenizers_encode_batch(tokenizer, inputs, input_lengths, num_texts, add_special_tokens, results);
 
-    // We trim the sequences to max_length and find the maximum length after trimming
     size_t* seq_lengths = (size_t*)calloc(num_texts, sizeof(size_t));
     if (!seq_lengths) {
         free(results);
@@ -56,21 +53,10 @@ GLiClassStatus* tokenize_inputs(
     tokenized->batch_size = num_texts;
     tokenized->seq_length = 0; // This will be the length of the longest sequence after trimming.
     for (size_t i = 0; i < num_texts; ++i) {
-        bool truncated = false;
-        if (results[i].len < min_length) {
-            seq_lengths[i] = 0;
-            truncated = true;
-
-        } else if (results[i].len > max_length) {
-            seq_lengths[i] = max_length;
-            truncated = true;
-        } else {
-            seq_lengths[i] = results[i].len;
-        }
+        seq_lengths[i] = results[i].len;
 
         if (info && info[i]) {
             info[i]->tokens_num = seq_lengths[i];
-            info[i]->truncated = truncated;
         }
 
         if (seq_lengths[i] > tokenized->seq_length) {
@@ -106,8 +92,6 @@ GLiClassStatus* tokenize_inputs(
 GLiClassStatus* tokenize_input(
     TokenizerHandle tokenizer, 
     const char* input,
-    const size_t min_length,
-    const size_t max_length,
     TokenizedInput* tokenized,
     GLiClassTokensInfo* info
 ) {
@@ -117,25 +101,8 @@ GLiClassStatus* tokenize_input(
     int add_special_tokens = 1;
     tokenizers_encode(tokenizer, input, input_length, add_special_tokens, &result);
 
-    bool truncated;
-    if (result.len < min_length) {
-        tokenized->seq_length = 0;
-        if (info) {
-            info->truncated = true;
-            info->tokens_num = tokenized->seq_length;
-        }
-        tokenizers_free_encode_results(&result, 1);
-        return NULL;
-    } else if (result.len > max_length) {
-        tokenized->seq_length = max_length;
-        truncated = true;
-    } else {
-        tokenized->seq_length = result.len;
-        truncated = false;
-    }
-
+    tokenized->seq_length = result.len;
     if (info) {
-        info->truncated = truncated;
         info->tokens_num = tokenized->seq_length;
     }
 

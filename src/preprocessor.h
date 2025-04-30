@@ -46,7 +46,6 @@ GLiClassStatus* prepare_input(
     const char** labels,
     size_t num_labels,
     bool prompt_first,
-    bool add_prefix_space,
     char** input
 );
 

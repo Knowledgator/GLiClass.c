@@ -40,7 +40,7 @@ int main() {
 
     GLiClassInferenceConfig config; 
     GLiClassStatus* gc_status = gliclass_create_inference_config(
-        8, 0, 2048, 0.5, "multi-label", false, &config
+        8, 0.5, "multi-label", &config
     );
     if (gc_status != NULL) {
         fprintf(stderr, "Invalid config: %s", gc_status->msg);

@@ -187,7 +187,6 @@ GLiClassStatus* gliclass_infer(
         labels, 
         num_labels, 
         session->model_config->prompt_first, 
-        config->add_prefix_space,
         &input
     );
     if (status != NULL) {
@@ -198,8 +197,6 @@ GLiClassStatus* gliclass_infer(
     status = tokenize_input(
         session->tokenizer, 
         (const char*)input,
-        config->min_length,
-        config->max_length,
         &tokenized,
         info
     );
@@ -301,8 +298,6 @@ GLiClassStatus* gliclass_infer_batch( // TODO: add quick exit on empty batches
             session->tokenizer, 
             (const char**)prepared_inputs, 
             current_batch_size,
-            config->min_length,
-            config->max_length,
             &tokenized,
             info
         );

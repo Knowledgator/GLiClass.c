@@ -7,7 +7,7 @@ int main() {
     const char* tokenizer_path = "./tokenizer/tokenizer.json";
     GLiClassInferenceConfig config;
     GLiClassStatus* status = gliclass_create_inference_config(
-        8, 0, 2048, 0.5, "multi-label", true, &config
+        8, 0.5, "multi-label", &config
     );
     if (status != NULL) {
         fprintf(stderr, "Invalid config: %s", status->msg);

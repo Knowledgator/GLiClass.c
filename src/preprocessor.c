@@ -28,10 +28,10 @@ GLiClassStatus* prepare_inputs(
     for (size_t i = 0; i < num_texts; ++i) {
         if (same_labels){
             status = prepare_input(
-                texts[i], labels[0], num_labels[0], model_config->prompt_first, config->add_prefix_space, &(*inputs)[i]
+                texts[i], labels[0], num_labels[0], model_config->prompt_first, &(*inputs)[i]
             );
         } else {
-            status = prepare_input(texts[i], labels[i], num_labels[i], model_config->prompt_first, config->add_prefix_space, &(*inputs)[i]);
+            status = prepare_input(texts[i], labels[i], num_labels[i], model_config->prompt_first, &(*inputs)[i]);
         }
 
         if (status != NULL) {
@@ -84,14 +84,13 @@ GLiClassStatus* prepare_input(
     const char** labels,
     size_t num_labels,
     bool prompt_first,
-    bool add_prefix_space,
     char** input
 ) {
-    const char* label_prefix = add_prefix_space ? "<<LABEL>> " : "<<LABEL>>";
+    const char* label_prefix = "<<LABEL>>";
     const char* sep_tag = "<<SEP>>";
     size_t total_len = (
-        strlen(text) + strlen(sep_tag) + (add_prefix_space ? 2 : 1) + num_labels*strlen(label_prefix)
-    ); // +1 for null terminator and +1 for space
+        strlen(text) + strlen(sep_tag) + 1 + num_labels*strlen(label_prefix)
+    ); // +1 for null terminator
 
     // size of result str
     for (size_t i = 0; i < num_labels; ++i) {
@@ -109,29 +108,12 @@ GLiClassStatus* prepare_input(
         );
         #ifdef _WIN32
         strcat_s(*input, total_len, sep_tag);
-        #else
-        strcat(*input, sep_tag);
-        #endif
-        if (add_prefix_space) {
-            #ifdef _WIN32
-            strcat_s(*input, total_len, " ");
-            #else
-            strcat(*input, " ");
-            #endif
-        }
-        #ifdef _WIN32
         strcat_s(*input, total_len, text);
         #else
+        strcat(*input, sep_tag);
         strcat(*input, text);
         #endif
     } else {
-        if (add_prefix_space) {
-            #ifdef _WIN32
-            strcat_s(*input, total_len, " ");
-            #else
-            strcat(*input, " ");
-            #endif
-        }
         #ifdef _WIN32
         strcat_s(*input, total_len, text);
         #else
