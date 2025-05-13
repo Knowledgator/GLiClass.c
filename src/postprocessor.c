@@ -4,6 +4,7 @@
 #include <math.h>
 #include "onnxruntime_c_api.h"
 #include "postprocessor.h"
+#include "utils.h"
 
 /**
  * Sigmoid function to map logits to probabilities.
@@ -38,7 +39,7 @@ void process_output_tensor(OrtValue* output_tensor, const OrtApi* g_ort, bool sa
     OrtTensorTypeAndShapeInfo* type_info = NULL;
     status = g_ort->GetTensorTypeAndShape(output_tensor, &type_info);
     if (status != NULL) {
-        fprintf(stderr, "Error: Unable to obtain information about the tensor type and shape.\n");
+        print_error("Unable to obtain information about the tensor type and shape.");
         if (status) g_ort->ReleaseStatus(status);
         return;
     }
@@ -47,7 +48,7 @@ void process_output_tensor(OrtValue* output_tensor, const OrtApi* g_ort, bool sa
     size_t num_dims = 0;
     status = g_ort->GetDimensionsCount(type_info, &num_dims);
     if (status != NULL) {
-        fprintf(stderr, "Error: Failed to get the number of dimensions of the tensor.\n");
+        print_error("Failed to get the number of dimensions of the tensor.");
         g_ort->ReleaseTensorTypeAndShapeInfo(type_info);
         if (status) g_ort->ReleaseStatus(status);
         return;
@@ -57,7 +58,7 @@ void process_output_tensor(OrtValue* output_tensor, const OrtApi* g_ort, bool sa
     int64_t* dims = (int64_t*)malloc(num_dims * sizeof(int64_t));
     status = g_ort->GetDimensions(type_info, dims, num_dims);
     if (status != NULL) {
-        fprintf(stderr, "Error: Failed to get tensor dimension sizes.\n");
+        print_error("Failed to get tensor dimension sizes.");
         free(dims);
         g_ort->ReleaseTensorTypeAndShapeInfo(type_info);
         if (status) g_ort->ReleaseStatus(status);
@@ -74,7 +75,7 @@ void process_output_tensor(OrtValue* output_tensor, const OrtApi* g_ort, bool sa
     float* output_data = NULL;
     status = g_ort->GetTensorMutableData(output_tensor, (void**)&output_data);
     if (status != NULL) {
-        fprintf(stderr, "Error: Failed to get tensor data.\n");
+        print_error("Failed to get tensor data.");
         free(dims);
         g_ort->ReleaseTensorTypeAndShapeInfo(type_info);
         if (status) g_ort->ReleaseStatus(status);
@@ -146,7 +147,7 @@ void process_output_tensor(OrtValue* output_tensor, const OrtApi* g_ort, bool sa
             printf("\n");
         }
     }else{
-        printf("This type of classification is not supported\n");
+        print_error("This type of classification is not supported");
     }
 
 

@@ -130,6 +130,7 @@ add_executable(GLiClass
                 src/tokenizer.c
                 src/preprocessor.c
                 src/read_data.c
+                src/utils.c
                 main.c)
 
 # Include directories with tokenizers-cpp header files

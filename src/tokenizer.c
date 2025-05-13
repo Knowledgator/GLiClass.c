@@ -5,6 +5,7 @@
 #include <stdbool.h>
 
 #include "tokenizer.h"
+#include "utils.h"
 
 /**
  * Tokenizes a batch of input texts using the provided tokenizer.
@@ -19,7 +20,7 @@
 TokenizedInputs tokenize_inputs(TokenizerHandle tokenizer, const char* inputs[], size_t num_texts, size_t max_length) {
     TokenizerEncodeResult* results = (TokenizerEncodeResult*)malloc(num_texts * sizeof(TokenizerEncodeResult));
     if (!results) {
-        fprintf(stderr, "Error while allocating memmory for tokenization results\n");
+        print_error("Error while allocating memmory for tokenization results\n");
         exit(1);
     }
 
@@ -35,7 +36,7 @@ TokenizedInputs tokenize_inputs(TokenizerHandle tokenizer, const char* inputs[],
     // We trim the sequences to max_length and find the maximum length after trimming
     size_t* seq_lengths = (size_t*)malloc(num_texts * sizeof(size_t));
     if (!seq_lengths) {
-        fprintf(stderr, "Error while allocating memory for sequence lengths\n");
+        print_error("Error while allocating memmory for sequence lengths\n");
         free(results);
         free(input_lengths);
         exit(1);
@@ -145,7 +146,7 @@ TokenizerHandle create_tokenizer(const char* filepath) {
     // Read tokenizer.json
     FILE* file = fopen(filepath, "rb");
     if (!file) {
-        fprintf(stderr, "Cant open file %s\n", filepath);
+        print_error("Failed to open tokenizer file %s", filepath);
         return NULL;
     }
 
@@ -156,7 +157,7 @@ TokenizerHandle create_tokenizer(const char* filepath) {
     // Allocate memory for JSON
     char* json = (char*)malloc(json_len + 1);
     if (!json) {
-        fprintf(stderr, "Cant allocate memory for JSON\n");
+        print_error("Failed to allocate memory for JSON");
         fclose(file);
         return NULL;
     }
@@ -165,7 +166,7 @@ TokenizerHandle create_tokenizer(const char* filepath) {
     size_t read_len = fread(json, 1, json_len, file);
     fclose(file);
     if (read_len != json_len) {
-        fprintf(stderr, "Failed to read %s\n", filepath);
+        print_error("Failed to read tokenizer file%s", filepath);
         free(json);
         return NULL;
     }
@@ -176,7 +177,7 @@ TokenizerHandle create_tokenizer(const char* filepath) {
     free(json); // Free memory after initializing
 
     if (!handle) {
-        fprintf(stderr, "Cant create tokenizer from %s\n", filepath);
+        print_error("Failed to create tokenizer from %s", filepath);
         return NULL;
     }
 

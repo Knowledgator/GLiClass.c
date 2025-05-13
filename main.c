@@ -20,6 +20,7 @@
 #include "paths.h"
 #include "configs.h"
 #include "parallel_processor.h"
+#include "utils.h"
 
 // Ini variables for data
 char** texts = NULL;                // Array of strings containing texts to classify
@@ -67,9 +68,9 @@ int main(int argc, char *argv[]) {
     bool prompt_first = string_to_bool(argv[2]);
     ///////////// Prepare inputs /////////////
     parse_json(json_string, &texts, &num_texts, &labels, &num_labels, &num_labels_size, &same_labels, &classification_type);
-    printf("DONE: parse_json;\n");
+    print_done("parse json;");
     if (classification_type == NULL){
-        printf("classification type is not provided\n");
+        print_error("classification type is not provided");
         return 1;
     }
     free(json_string);
@@ -78,25 +79,25 @@ int main(int argc, char *argv[]) {
     if (!tokenizer_handler) {
         return 1; // This error is created in create_tokenizer
     }
-    printf("DONE: create_tokenizer;\n");  
+    print_done("create tokenizer;");
 
     initialize_ort_api();
-    printf("DONE: initialize_ort_api;\n");
+    print_done("initialize ort api;");
 
     OrtEnv* env = initialize_ort_environment();
     if (env == NULL) {
-        fprintf(stderr, "Error: Failed to initialize ONNX Runtime.\n");
+        print_error("Failed to initialize ONNX Runtime.");
         return -1;
     }
-    printf("DONE: initialize_ort_environment;\n");
+    print_done("initialize ort environment;");
 
     OrtSession* session = create_ort_session(env, MODEL_PATH, NUM_THREADS);
     if (session == NULL) {
-        fprintf(stderr, "Error: Failed to create session ONNX Runtime.\n");
+        print_error("Failed to create session ONNX Runtime.");
         g_ort->ReleaseEnv(env);
         return -1;
     }
-    printf("DONE: create_ort_session;\n\n");
+    print_done("create ort session;");
     
     /////////////////////////////////////////////////////////
     //////////////////// INFERENCE START ////////////////////
@@ -109,33 +110,10 @@ int main(int argc, char *argv[]) {
     attention_mask_tensors = malloc(sizeof(OrtValue*) * num_batches);
     output_tensors = malloc(sizeof(OrtValue*) * num_batches);
 
-    double start_time, end_time;
-    start_time = omp_get_wtime();
-
     // Parallel preprocessing
     parallel_preprocess(texts, labels, num_labels, num_texts,
                        same_labels, prompt_first, tokenizer_handler,
                        input_ids_tensors, attention_mask_tensors);    
-    // #pragma omp parallel for schedule(dynamic)
-    // for (size_t i = 0; i < num_texts; i += BATCH_SIZE) {
-    //     size_t current_batch_size = (i + BATCH_SIZE > num_texts) ? (num_texts - i) : BATCH_SIZE;
-
-    //     // Prepare input data
-    //     const char** batch_texts = (const char**)&texts[i];
-    //     const char*** batch_labels = (const char***)(same_labels ? (void*)labels : (void*)&labels[i]);
-    //     size_t* batch_num_labels = (same_labels) ? num_labels : &num_labels[i];
-
-    //     // Prepare tokens
-    //     const char** prepared_inputs = prepare_inputs(batch_texts, batch_labels, current_batch_size, batch_num_labels, same_labels, prompt_first);
-    //     TokenizedInputs tokenized = tokenize_inputs(tokenizer_handler, prepared_inputs, current_batch_size, MAX_LENGTH);
-
-    //     // Prepare input tensors
-    //     prepare_input_tensors(&tokenized, &input_ids_tensors[i / BATCH_SIZE], &attention_mask_tensors[i / BATCH_SIZE]);
-
-    //     // Clean up memory
-    //     free_prepared_inputs((char**)prepared_inputs, current_batch_size);
-    //     free_tokenized_inputs(&tokenized);
-    // }
 
     // Inference stage - processing batches
     #pragma omp parallel for schedule(dynamic)
@@ -153,22 +131,7 @@ int main(int argc, char *argv[]) {
     parallel_postprocess(output_tensors, num_batches, num_texts,
                         texts, labels, num_labels,
                         same_labels, num_labels_size, classification_type);
-    // #pragma omp parallel for schedule(dynamic)
-    // for (size_t i = 0; i < num_batches; i++) {
-    //     size_t current_batch_size = (i == num_batches - 1) ? (num_texts - i * BATCH_SIZE) : BATCH_SIZE;
-
-    //     const char** batch_texts = (const char**)&texts[i * BATCH_SIZE];
-    //     const char*** batch_labels = (const char***)(same_labels ? (void*)labels : (void*)&labels[i * BATCH_SIZE]);
-    //     size_t* batch_num_labels = (same_labels) ? num_labels : &num_labels[i * BATCH_SIZE];
-
-    //     process_output_tensor(output_tensors[i], g_ort, same_labels, batch_labels, batch_num_labels, num_labels_size, THRESHOLD,
-    //                           current_batch_size, batch_texts, classification_type);
-    //     // Free output tensor after processing
-    //     g_ort->ReleaseValue(output_tensors[i]);
-    // }
     
-    end_time = omp_get_wtime();
-    printf("Execution time: %f seconds\n", end_time - start_time);
     // Free resources
     for (size_t i = 0; i < num_batches; i++) {
         g_ort->ReleaseValue(input_ids_tensors[i]);

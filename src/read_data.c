@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include "cJSON.h" 
+#include "utils.h"
 
 /**
  * Reads the entire content of a file and returns it as a string.
@@ -14,7 +15,7 @@
 char* read_file(const char* filename) {
     FILE* file = fopen(filename, "rb");
     if (!file) {
-        fprintf(stderr, "Error: Faild to open file %s\n", filename);
+        print_error("Failed to open file: %s", filename);
         return NULL;
     }
     fseek(file, 0, SEEK_END);
@@ -47,7 +48,7 @@ void parse_json(const char* json_string, char*** texts, size_t* num_texts, char*
     // Parse json
     cJSON* json = cJSON_Parse(json_string);
     if (!json) {
-        fprintf(stderr, "Failed to parse JSON: %s\n", cJSON_GetErrorPtr());
+        print_error("Failed to parse JSON: %s", cJSON_GetErrorPtr());
         return;
     }
     
@@ -109,7 +110,7 @@ void parse_json(const char* json_string, char*** texts, size_t* num_texts, char*
         if (cJSON_IsArray(labels_json)) {
             // We check that the number of tags matches the number of texts
             if (cJSON_GetArraySize(labels_json) != *num_texts) {
-                fprintf(stderr, "Error:the number of arrays of labels does not match the number of texts.\n");
+                print_error("the number of arrays of labels does not match the number of texts.");
                 cJSON_Delete(json);
                 return;
             }
@@ -125,7 +126,7 @@ void parse_json(const char* json_string, char*** texts, size_t* num_texts, char*
                     (*num_labels)[i] = num_labels_for_text;
                     (*labels)[i] = (char**)malloc(num_labels_for_text * sizeof(char*));
                     if (!(*labels)[i]) {
-                        fprintf(stderr, "Error: failed to allocate memory for text labels %zu.\n", i);
+                        print_error("failed to allocate memory for text labels %zu.\n", i);
                         cJSON_Delete(json);
                         return;
                     }
@@ -136,7 +137,7 @@ void parse_json(const char* json_string, char*** texts, size_t* num_texts, char*
                         }
                     }
                 }else{
-                    fprintf(stderr, "Error: labels forr text %zu are not array.\n", i);
+                    print_error("labels forr text %zu are not array.\n", i);
                 }
             }
         }

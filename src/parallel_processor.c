@@ -3,6 +3,7 @@
 #include "postprocessor.h"
 #include "model.h"
 #include "configs.h"
+#include "utils.h"
 #include <omp.h>
 
 /**
