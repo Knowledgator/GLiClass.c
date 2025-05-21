@@ -1,4 +1,8 @@
 .venv
+test/
+*.engine
+tensorrt/
+tmp.txt
 model/
 onnx/
 tokenizer/

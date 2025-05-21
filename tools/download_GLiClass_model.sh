@@ -12,8 +12,8 @@ MODEL_NAME=$1
 MODEL_NAME="$1"
 
 # Dirs
-TOKENIZER_DIR="tokenizer"
-MODEL_DIR="onnx"
+TOKENIZER_DIR="./tokenizer"
+MODEL_DIR="./onnx"
 
 mkdir -p "$MODEL_DIR"
 mkdir -p "$TOKENIZER_DIR"

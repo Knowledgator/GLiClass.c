@@ -16,7 +16,7 @@ include(FetchContent)
 
 # Add option to choose between CPU and GPU
 option(ONNX "Build ONNX runtime inference with default CPU provider" ON)
-option(ONNX_CUDA "Build ONNX runtime inference with CUDA provider support" OFF)
+option(ONNX_CUDA "Build ONNX runtime inference with CUDA provider support" ON)
 option(ONNX_OPENVINO "Build ONNX runtime inference with OpenVino provider support" OFF)
 option(OPENVINO "Build Openvino runtime inference" OFF)
 option(SKIP_CHECK "Skip environment check" OFF)
